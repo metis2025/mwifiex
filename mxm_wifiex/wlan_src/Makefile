@@ -139,20 +139,7 @@ CONFIG_ANDROID_KERNEL=y
 ifeq ($(ANDROID_PRODUCT_OUT),1)
 ccflags-y += -DANDROID_SDK_VERSION=$(ANDROID_SDK_VERSION)
 else
-include $(ANDROID_BUILD_TOP)/build/make/core/build_id.mk
-ifeq ($(shell echo "$(BUILD_ID)" | cut -c1),R)
-      ccflags-y += -DANDROID_SDK_VERSION=30
-else ifeq ($(shell echo "$(BUILD_ID)" | cut -c1),S)
-      ccflags-y += -DANDROID_SDK_VERSION=31
-else ifeq ($(shell echo "$(BUILD_ID)" | cut -c1),T)
-      ccflags-y += -DANDROID_SDK_VERSION=33
-else ifeq ($(shell echo "$(BUILD_ID)" | cut -c1),U)
-      ccflags-y += -DANDROID_SDK_VERSION=34
-else
-    # Default optimization or actions
-      ANDROID_SDK_VERSION := 0
-      ccflags-y += -DANDROID_SDK_VERSION
-endif
+ccflags-y += -DANDROID_SDK_VERSION=34
 endif
 endif
 endif
