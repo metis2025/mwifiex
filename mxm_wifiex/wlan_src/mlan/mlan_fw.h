@@ -4453,7 +4453,7 @@ typedef MLAN_PACK_START struct _HostCmd_DS_802_11_SCAN_RSP {
 	/** Numner of sets */
 	t_u8 number_of_sets;
 	/** BSS descriptor and TLV buffer */
-	t_u8 bss_desc_and_tlv_buffer[1];
+	t_u8 bss_desc_and_tlv_buffer[];
 } MLAN_PACK_END HostCmd_DS_802_11_SCAN_RSP;
 
 /** HostCmd_DS_802_11_BG_SCAN_CONFIG */
