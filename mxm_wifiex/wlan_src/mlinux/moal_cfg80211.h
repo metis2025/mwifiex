@@ -3,7 +3,7 @@
  * @brief This file contains the CFG80211 specific defines.
  *
  *
- * Copyright 2011-2022 NXP
+ * Copyright 2011-2022, 2024 NXP
  *
  * This software file (the File) is distributed by NXP
  * under the terms of the GNU General Public License Version 2, June 1991
@@ -431,7 +431,13 @@ int woal_cfg80211_set_coalesce(struct wiphy *wiphy,
 			       struct cfg80211_coalesce *coalesce);
 #endif
 
-#if KERNEL_VERSION(3, 4, 0) <= CFG80211_VERSION_CODE
+#if KERNEL_VERSION(6, 7, 0) <= CFG80211_VERSION_CODE
+int woal_cfg80211_add_beacon(struct wiphy *wiphy, struct net_device *dev,
+			     struct cfg80211_ap_settings *params);
+
+int woal_cfg80211_set_beacon(struct wiphy *wiphy, struct net_device *dev,
+			     struct cfg80211_ap_update *info);
+#elif KERNEL_VERSION(3, 4, 0) <= CFG80211_VERSION_CODE
 int woal_cfg80211_add_beacon(struct wiphy *wiphy, struct net_device *dev,
 			     struct cfg80211_ap_settings *params);
 

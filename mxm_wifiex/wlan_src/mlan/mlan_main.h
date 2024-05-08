@@ -570,8 +570,8 @@ extern t_void (*assert_callback)(t_void *pmoal_handle, t_u32 cond);
 /** Maximum numbfer of registers to read for multiple port */
 #if defined(SD8887) || defined(SD8997) || defined(SD8977) ||                   \
 	defined(SD8987) || defined(SD9098) || defined(SD9097) ||               \
-	defined(SDIW624) || defined(SD8978) || defined(SD9177) ||              \
-	defined(SDIW615)
+	defined(SDAW693) || defined(SDIW624) || defined(SD8978) ||             \
+	defined(SD9177) || defined(SDIW615)
 #define MAX_MP_REGS 196
 #else
 /* upto 0xB7 */
@@ -1287,11 +1287,11 @@ typedef struct _mlan_private {
 #ifdef STA_SUPPORT
 	/** Buffer to store the association response for application retrieval
 	 */
-	t_u8 assoc_rsp_buf[MRVDRV_ASSOC_RSP_BUF_SIZE];
+	t_u8 assoc_rsp_buf[ASSOC_RSP_BUF_SIZE];
 	/** Length of the data stored in assoc_rsp_buf */
 	t_u32 assoc_rsp_size;
 	/** Buffer to store the association req IEs */
-	t_u8 assoc_req_buf[MRVDRV_ASSOC_RSP_BUF_SIZE];
+	t_u8 assoc_req_buf[ASSOC_RSP_BUF_SIZE];
 	/** Length of the data stored in assoc_rsp_buf */
 	t_u32 assoc_req_size;
 	/** Generic IEEE IEs passed from the application to be inserted into the
@@ -2341,6 +2341,13 @@ typedef struct _adapter_operations {
 	mlan_status (*enable_host_int)(mlan_adapter *pmadapter);
 	/** select host interrupt */
 	mlan_status (*select_host_int)(mlan_adapter *pmadapter);
+#ifdef PCIEAW693
+	/** get_max_msdu_pkt_num in AMSDU packet*/
+	t_u32 (*get_max_msdu_cnt)(mlan_adapter *pmadapter);
+	/** send_data_list */
+	mlan_status (*send_data_list)(mlan_adapter *pmadapter, t_u8 type,
+				      t_u8 num_pkt, t_u16 pkt_size);
+#endif
 	/**Interface header length*/
 	t_u32 intf_header_len;
 } mlan_adapter_operations;
@@ -2455,7 +2462,8 @@ struct _mlan_adapter {
 	t_u32 fw_cap_ext;
 #if defined(PCIE9098) || defined(SD9098) || defined(USB9098) ||                \
 	defined(PCIE9097) || defined(SD9097) || defined(USB9097) ||            \
-	defined(SDIW624) || defined(PCIEIW624) || defined(USBIW624)
+	defined(SDAW693) || defined(SDIW624) || defined(PCIEAW693) ||          \
+	defined(PCIEIW624) || defined(USBIW624)
 	/** High byte for 5G, low byte for 2G, like 0x2211 0x22 for 5G, 0x11 for
 	 * 2G */
 	t_u16 user_htstream;
@@ -2802,6 +2810,8 @@ struct _mlan_adapter {
 	t_u16 max_mgmt_ie_index;
 	/** Head of Rx data queue */
 	mlan_list_head rx_data_queue;
+	/** Head of AMSDU Tx data queue */
+	mlan_list_head amsdu_txq;
 #ifdef MFG_CMD_SUPPORT
 	t_u32 mfg_mode;
 #endif
@@ -3960,6 +3970,30 @@ static INLINE int wlan_is_tdls_link_setup(tdlsStatus_e status)
 		break;
 	}
 	return ret;
+}
+
+/**
+ *  @brief This function checks if address is broadcast
+ *
+ *  @param addr  mac address
+ *  @return      1 - broadcast, 0 - not broadcast
+ */
+static INLINE t_bool is_bcast_addr(t_u8 *addr)
+{
+	return ((*(t_u16 *)addr == 0xffff) &&
+		(*(t_u16 *)((t_u8 *)addr + 2) == 0xffff) &&
+		(*(t_u16 *)((t_u8 *)addr + 4) == 0xffff));
+}
+
+/**
+ *  @brief This function checks if address is multicast
+ *
+ *  @param addr  mac address
+ *  @return      1 - multicast, 0 - not multicast
+ */
+static INLINE t_bool is_mcast_addr(t_u8 *addr)
+{
+	return ((*(t_u8 *)addr & 0x01) == 0x01);
 }
 
 /**

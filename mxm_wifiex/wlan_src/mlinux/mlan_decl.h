@@ -396,7 +396,7 @@ typedef t_u8 mlan_802_11_mac_addr[MLAN_MAC_ADDR_LENGTH];
 /** Black bird card type */
 #define CARD_TYPE_AW693 0x0c
 /** IW615 card type */
-#define CARD_TYPE_IW615 0x0c
+#define CARD_TYPE_IW615 0x0d
 
 /** 9098 A0 reverion num */
 #define CHIP_9098_REV_A0 1
@@ -667,6 +667,7 @@ typedef enum {
 #define MEVT_D MBIT(18)
 #define MFW_D MBIT(19)
 #define MIF_D MBIT(20)
+#define MFWDP_D MBIT(21)
 
 #define MENTRY MBIT(28)
 #define MWARN MBIT(29)

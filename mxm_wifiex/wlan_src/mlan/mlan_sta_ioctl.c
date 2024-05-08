@@ -3,7 +3,7 @@
  *  @brief This file contains the functions for station ioctl.
  *
  *
- *  Copyright 2008-2023 NXP
+ *  Copyright 2008-2024 NXP
  *
  *  This software file (the File) is distributed by NXP
  *  under the terms of the GNU General Public License Version 2, June 1991
@@ -2509,8 +2509,15 @@ static mlan_status wlan_sec_ioctl_auth_mode(pmlan_adapter pmadapter,
 	sec = (mlan_ds_sec_cfg *)pioctl_req->pbuf;
 	if (pioctl_req->action == MLAN_ACT_GET)
 		sec->param.auth_mode = pmpriv->sec_info.authentication_mode;
-	else
+	else {
 		pmpriv->sec_info.authentication_mode = sec->param.auth_mode;
+		if (pmpriv->sec_info.authentication_mode ==
+		    MLAN_AUTH_MODE_OWE) {
+			/* set ewpa_query to TRUE for OWE to set ewpa_enabled
+			 * flag later */
+			pmpriv->ewpa_query = MTRUE;
+		}
+	}
 
 	pioctl_req->data_read_written = sizeof(t_u32) + MLAN_SUB_COMMAND_SIZE;
 	LEAVE();
@@ -4580,8 +4587,8 @@ static mlan_status wlan_misc_ioctl_ips_cfg(pmlan_adapter pmadapter,
  *
  *  @return             MLAN_STATUS_SUCCESS or MLAN_STATUS_FAILURE
  */
-mlan_status wlan_misc_ioctl_ipv6_ra_offload(pmlan_adapter pmadapter,
-					    mlan_ioctl_req *pioctl_req)
+static mlan_status wlan_misc_ioctl_ipv6_ra_offload(pmlan_adapter pmadapter,
+						   mlan_ioctl_req *pioctl_req)
 {
 	pmlan_private pmpriv = pmadapter->priv[pioctl_req->bss_index];
 	mlan_ds_misc_cfg *misc = MNULL;
@@ -5447,7 +5454,8 @@ mlan_status wlan_set_ewpa_mode(mlan_private *priv, mlan_ds_passphrase *psec_pp)
 
 	if ((psec_pp->psk_type == MLAN_PSK_PASSPHRASE &&
 	     psec_pp->psk.passphrase.passphrase_len > 0) ||
-	    (psec_pp->psk_type == MLAN_PSK_PMK))
+	    (psec_pp->psk_type == MLAN_PSK_PMK) ||
+	    priv->sec_info.authentication_mode == MLAN_AUTH_MODE_OWE)
 		priv->sec_info.ewpa_enabled = MTRUE;
 	else
 		priv->sec_info.ewpa_enabled = MFALSE;

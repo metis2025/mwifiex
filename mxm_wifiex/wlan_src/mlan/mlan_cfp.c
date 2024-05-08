@@ -5,7 +5,7 @@
  *  related code
  *
  *
- *  Copyright 2009-2023 NXP
+ *  Copyright 2009-2024 NXP
  *
  *  This software file (the File) is distributed by NXP
  *  under the terms of the GNU General Public License Version 2, June 1991
@@ -2181,7 +2181,7 @@ int wlan_get_rate_index(pmlan_adapter pmadapter, t_u16 *rate_bitmap, int size)
  *
  *  @return                 BAND_B|BAND_G|BAND_A
  */
-t_u16 wlan_convert_config_bands(t_u16 config_bands)
+static t_u16 wlan_convert_config_bands(t_u16 config_bands)
 {
 	t_u16 bands = 0;
 	if (config_bands & BAND_B)

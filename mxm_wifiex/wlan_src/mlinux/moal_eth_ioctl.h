@@ -4,7 +4,7 @@
  * @brief This file contains definition for private IOCTL call.
  *
  *
- * Copyright 2008-2023 NXP
+ * Copyright 2008-2024 NXP
  *
  * This software file (the File) is distributed by NXP
  * under the terms of the GNU General Public License Version 2, June 1991
@@ -405,6 +405,8 @@ typedef struct _ssu_params_cfg {
 #define PRIV_CMD_TWT_TEARDOWN "twt_teardown"
 /** Private command: TWT report Cfg */
 #define PRIV_CMD_TWT_REPORT "twt_report"
+/** Private command: TWT Information Cfg */
+#define PRIV_CMD_TWT_INFORMATION "twt_information"
 
 #define PRIV_CMD_LPM "lpm"
 
@@ -414,6 +416,10 @@ int woal_do_ioctl(struct net_device *dev, struct ifreq *req, void __user *data,
 #else
 int woal_do_ioctl(struct net_device *dev, struct ifreq *req, int cmd);
 #endif
+
+mlan_status parse_arguments(t_u8 *pos, int *data, int datalen,
+			    int *user_data_len);
+
 /*
  * For android private commands, fixed value of ioctl is used.
  * Internally commands are differentiated using strings.

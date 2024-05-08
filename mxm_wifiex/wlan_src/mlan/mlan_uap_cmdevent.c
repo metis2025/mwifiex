@@ -722,7 +722,8 @@ static mlan_status wlan_uap_cmd_ap_config(pmlan_private pmpriv,
 	t_u16 ac;
 #if defined(PCIE9098) || defined(SD9098) || defined(USB9098) ||                \
 	defined(PCIE9097) || defined(USB9097) || defined(SDIW624) ||           \
-	defined(PCIEIW624) || defined(USBIW624) || defined(SD9097)
+	defined(SDAW693) || defined(PCIEAW693) || defined(PCIEIW624) ||        \
+	defined(USBIW624) || defined(SD9097)
 	int rx_mcs_supp = 0;
 #endif
 
@@ -1335,7 +1336,8 @@ static mlan_status wlan_uap_cmd_ap_config(pmlan_private pmpriv,
 			   sizeof(tlv_htcap->ht_cap.supported_mcs_set));
 #if defined(PCIE9098) || defined(SD9098) || defined(USB9098) ||                \
 	defined(PCIE9097) || defined(USB9097) || defined(SDIW624) ||           \
-	defined(PCIEIW624) || defined(USBIW624) || defined(SD9097)
+	defined(SDAW693) || defined(PCIEAW693) || defined(PCIEIW624) ||        \
+	defined(USBIW624) || defined(SD9097)
 		if (IS_CARD9098(pmpriv->adapter->card_type) ||
 		    IS_CARDIW624(pmpriv->adapter->card_type) ||
 		    IS_CARD9097(pmpriv->adapter->card_type) ||
@@ -5628,12 +5630,15 @@ mlan_status wlan_ops_uap_process_event(t_void *priv)
 	ENTER();
 
 	if (!pmbuf) {
+		PRINTM(MERROR, "ERR:event buffer is null\n");
 		LEAVE();
 		return MLAN_STATUS_FAILURE;
 	}
 	/* Event length check */
 	if (pmbuf && (pmbuf->data_len - sizeof(eventcause)) > MAX_EVENT_SIZE) {
 		pmbuf->status_code = MLAN_ERROR_PKT_SIZE_INVALID;
+		PRINTM(MERROR, "ERR:event buffer len invalid=%d\n",
+		       pmbuf->data_len);
 		LEAVE();
 		return MLAN_STATUS_FAILURE;
 	}

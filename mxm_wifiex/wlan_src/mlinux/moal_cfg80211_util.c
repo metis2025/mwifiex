@@ -3,7 +3,7 @@
  * @brief This file contains the functions for CFG80211 vendor.
  *
  *
- * Copyright 2015-2022 NXP
+ * Copyright 2015-2022, 2024 NXP
  *
  * This software file (the File) is distributed by NXP
  * under the terms of the GNU General Public License Version 2, June 1991
@@ -1142,7 +1142,7 @@ done:
  *
  * @return      An invalid ring id for failure or valid ring id on success.
  */
-int woal_get_ring_id_by_name(moal_private *priv, char *ring_name)
+static int woal_get_ring_id_by_name(moal_private *priv, char *ring_name)
 {
 	int id;
 	wifi_ring_buffer *ring;
@@ -1172,8 +1172,9 @@ int woal_get_ring_id_by_name(moal_private *priv, char *ring_name)
  *
  * @return      0: success  1: fail
  */
-int woal_start_logging(moal_private *priv, char *ring_name, int log_level,
-		       int flags, int time_intval, int threshold)
+static int woal_start_logging(moal_private *priv, char *ring_name,
+			      int log_level, int flags, int time_intval,
+			      int threshold)
 {
 	int ret = 0;
 	int ring_id;
@@ -1452,8 +1453,8 @@ static t_u32 woal_get_ring_next_entry(wifi_ring_buffer *ring, t_u32 offset)
  *
  * @return      data length
  */
-int woal_ring_pull_data(moal_private *priv, int ring_id, void *data,
-			t_s32 buf_len)
+static int woal_ring_pull_data(moal_private *priv, int ring_id, void *data,
+			       t_s32 buf_len)
 {
 	t_s32 r_len = 0;
 	wifi_ring_buffer *ring;
@@ -1499,9 +1500,10 @@ int woal_ring_pull_data(moal_private *priv, int ring_id, void *data,
  *
  * @return      0: success  1: fail
  */
-int woal_ring_buffer_data_vendor_event(moal_private *priv, int ring_id,
-				       t_u8 *data, int len,
-				       wifi_ring_buffer_status *ring_status)
+static int
+woal_ring_buffer_data_vendor_event(moal_private *priv, int ring_id, t_u8 *data,
+				   int len,
+				   wifi_ring_buffer_status *ring_status)
 {
 	struct wiphy *wiphy = NULL;
 	struct sk_buff *skb = NULL;
@@ -1588,7 +1590,7 @@ done:
  *
  * @return void
  */
-void woal_ring_poll_worker(struct work_struct *work)
+static void woal_ring_poll_worker(struct work_struct *work)
 {
 	struct delayed_work *d_work = to_delayed_work(work);
 	wifi_ring_buffer *ring_info =
@@ -1659,8 +1661,8 @@ exit:
  *
  * @return      0: success  -1: fail
  */
-int woal_ring_push_data(moal_private *priv, int ring_id,
-			wifi_ring_buffer_entry *hdr, void *data)
+static int woal_ring_push_data(moal_private *priv, int ring_id,
+			       wifi_ring_buffer_entry *hdr, void *data)
 {
 	unsigned long flags;
 	t_u32 w_len;
@@ -2073,8 +2075,8 @@ done:
  *
  * @return      0: success  1: fail
  */
-int woal_wake_reason_vendor_event(moal_private *priv,
-				  mlan_ds_hs_wakeup_reason wake_reason)
+static int woal_wake_reason_vendor_event(moal_private *priv,
+					 mlan_ds_hs_wakeup_reason wake_reason)
 {
 	struct wiphy *wiphy = NULL;
 	struct sk_buff *skb = NULL;
@@ -2166,9 +2168,8 @@ woal_cfg80211_subcmd_start_packet_fate_monitor(struct wiphy *wiphy,
 	t_u32 reply_len = 0;
 	int ret = 0;
 
-	/* TODO: Tune pkt fate monitor for TP, Disabling it for now */
-	// struct net_device *dev = wdev->netdev;
-	// moal_private *priv = (moal_private *)woal_get_netdev_priv(dev);
+	struct net_device *dev = wdev->netdev;
+	moal_private *priv = (moal_private *)woal_get_netdev_priv(dev);
 
 	ENTER();
 
@@ -2180,8 +2181,9 @@ woal_cfg80211_subcmd_start_packet_fate_monitor(struct wiphy *wiphy,
 		goto done;
 	}
 
-	/* TODO: Tune pkt fate monitor for TP, Disabling it for now */
-	// priv->pkt_fate_monitor_enable = MTRUE;
+	/* Enable pkt fate monitor and use drvdbg MDAT_D to control forwarding
+	 * data packet to kernel */
+	priv->pkt_fate_monitor_enable = MTRUE;
 
 	ret = cfg80211_vendor_cmd_reply(skb);
 
@@ -2206,10 +2208,11 @@ done:
  *
  * @return      0: success  1: fail
  */
-int woal_packet_fate_vendor_event(moal_private *priv,
-				  packet_fate_packet_type pkt_type, t_u8 fate,
-				  frame_type payload_type, t_u32 drv_ts_usec,
-				  t_u32 fw_ts_usec, t_u8 *data, t_u32 len)
+static int woal_packet_fate_vendor_event(moal_private *priv,
+					 packet_fate_packet_type pkt_type,
+					 t_u8 fate, frame_type payload_type,
+					 t_u32 drv_ts_usec, t_u32 fw_ts_usec,
+					 t_u8 *data, t_u32 len)
 {
 	struct wiphy *wiphy = NULL;
 	struct sk_buff *skb = NULL;
@@ -2529,8 +2532,9 @@ done:
  * @return non-zero if packet should be passed to AP, zero if
  *         packet should be dropped.
  */
-int process_packet(const t_u8 *program, t_u32 program_len, const t_u8 *packet,
-		   t_u32 packet_len, t_u32 filter_age)
+static int process_packet(const t_u8 *program, t_u32 program_len,
+			  const t_u8 *packet, t_u32 packet_len,
+			  t_u32 filter_age)
 {
 	/* Program counter */
 	t_u32 pc = 0;

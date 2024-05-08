@@ -3,7 +3,7 @@
  * @brief This file contains the functions for uAP CFG80211.
  *
  *
- * Copyright 2011-2023 NXP
+ * Copyright 2011-2024 NXP
  *
  * This software file (the File) is distributed by NXP
  * under the terms of the GNU General Public License Version 2, June 1991
@@ -1791,8 +1791,12 @@ static int woal_cfg80211_add_vlan_vir_if(struct wiphy *wiphy,
 			sizeof(ndev->perm_addr));
 	moal_memcpy_ext(handle, ndev->perm_addr, priv->current_addr, ETH_ALEN,
 			sizeof(ndev->perm_addr));
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 16, 0)
+	eth_hw_addr_set(ndev, priv->current_addr);
+#else
 	moal_memcpy_ext(handle, (t_void *)ndev->dev_addr, ndev->perm_addr,
 			ETH_ALEN, MAX_ADDR_LEN);
+#endif
 
 	SET_NETDEV_DEV(ndev, wiphy_dev(wiphy));
 	ndev->watchdog_timeo = MRVDRV_DEFAULT_UAP_WATCHDOG_TIMEOUT;
@@ -1827,9 +1831,18 @@ static int woal_cfg80211_add_vlan_vir_if(struct wiphy *wiphy,
 
 	ndev->ieee80211_ptr->use_4addr = params->use_4addr;
 
+#if CFG80211_VERSION_CODE >= KERNEL_VERSION(5, 12, 0)
+	ret = cfg80211_register_netdevice(ndev);
+#else
 	ret = register_netdevice(ndev);
+#endif
 	if (ret) {
 		PRINTM(MFATAL, "register net_device failed, ret=%d\n", ret);
+#if CFG80211_VERSION_CODE >= KERNEL_VERSION(5, 12, 0)
+		cfg80211_unregister_netdevice(ndev);
+#else
+		unregister_netdevice(ndev);
+#endif
 		free_netdev(ndev);
 		goto fail;
 	}
@@ -1950,6 +1963,11 @@ moal_private *woal_alloc_virt_interface(moal_handle *handle, t_u8 bss_index,
 	spin_lock_init(&priv->tx_stat_lock);
 	INIT_LIST_HEAD(&priv->mcast_list);
 	spin_lock_init(&priv->mcast_lock);
+
+#ifdef STA_CFG80211
+	INIT_LIST_HEAD(&priv->dhcp_discover_queue);
+	spin_lock_init(&priv->dhcp_discover_lock);
+#endif
 
 	spin_lock_init(&priv->connect_lock);
 
@@ -2668,7 +2686,11 @@ int woal_cfg80211_del_virtual_intf(struct wiphy *wiphy,
 		PRINTM(MCMND, "wlan: Easymesh del Vlan aid=%d\n", aid);
 		vlan_priv->parent_priv->vlan_sta_list[(aid - 1) % MAX_STA_COUNT]
 			->is_valid = MFALSE;
+#if CFG80211_VERSION_CODE >= KERNEL_VERSION(5, 12, 0)
+		cfg80211_unregister_netdevice(dev);
+#else
 		unregister_netdevice(dev);
+#endif
 		LEAVE();
 		return ret;
 	}
@@ -2907,7 +2929,18 @@ done:
 	return ret;
 }
 
-#if CFG80211_VERSION_CODE >= KERNEL_VERSION(3, 4, 0)
+#if CFG80211_VERSION_CODE >= KERNEL_VERSION(6, 7, 0)
+/**
+ * @brief set AP or GO parameter
+ *
+ * @param wiphy           A pointer to wiphy structure
+ * @param dev             A pointer to net_device structure
+ * @param info            A pointer to cfg80211_ap_update structure
+ * @return                0 -- success, otherwise fail
+ */
+int woal_cfg80211_set_beacon(struct wiphy *wiphy, struct net_device *dev,
+			     struct cfg80211_ap_update *info)
+#elif CFG80211_VERSION_CODE >= KERNEL_VERSION(3, 4, 0)
 /**
  * @brief set AP or GO parameter
  *
@@ -2932,6 +2965,9 @@ int woal_cfg80211_set_beacon(struct wiphy *wiphy, struct net_device *dev,
 #endif
 {
 	moal_private *priv = (moal_private *)woal_get_netdev_priv(dev);
+#if CFG80211_VERSION_CODE >= KERNEL_VERSION(6, 7, 0)
+	struct cfg80211_beacon_data *params = &info->beacon;
+#endif
 	int ret = 0;
 
 	ENTER();
@@ -3007,7 +3043,6 @@ int woal_cfg80211_del_beacon(struct wiphy *wiphy, struct net_device *dev)
 #ifdef STA_SUPPORT
 	moal_private *pmpriv = NULL;
 #endif
-	int i;
 
 	ENTER();
 
@@ -3093,19 +3128,7 @@ int woal_cfg80211_del_beacon(struct wiphy *wiphy, struct net_device *dev)
 	memset(priv->uap_wep_key, 0, sizeof(priv->uap_wep_key));
 	priv->channel = 0;
 	priv->bandwidth = 0;
-#ifdef UAP_SUPPORT
-	priv->multi_ap_flag = 0;
-	/* Clear the whole backhaul station list in moal */
-	for (i = 0; i < MAX_STA_COUNT; i++) {
-		if (priv->vlan_sta_list[i]) {
-			if (priv->vlan_sta_list[i]->is_valid)
-				unregister_netdevice(
-					priv->vlan_sta_list[i]->netdev);
-			kfree(priv->vlan_sta_list[i]);
-		}
-		priv->vlan_sta_list[i] = NULL;
-	}
-#endif
+
 	PRINTM(MMSG, "wlan: %s AP stopped\n", dev->name);
 done:
 	LEAVE();
@@ -3234,6 +3257,11 @@ int woal_cfg80211_del_station(struct wiphy *wiphy, struct net_device *dev,
 #endif
 	u16 reason_code = REASON_CODE_DEAUTH_LEAVING;
 	moal_private *priv = (moal_private *)woal_get_netdev_priv(dev);
+#ifdef UAP_SUPPORT
+#if defined(UAP_CFG80211) || defined(STA_CFG80211)
+	int i;
+#endif
+#endif
 	ENTER();
 
 #ifdef UAP_SUPPORT
@@ -3265,6 +3293,25 @@ int woal_cfg80211_del_station(struct wiphy *wiphy, struct net_device *dev,
 	} else {
 		PRINTM(MIOCTL, "del station\n");
 	}
+
+#ifdef UAP_SUPPORT
+#if defined(UAP_CFG80211) || defined(STA_CFG80211)
+	if (mac_addr) {
+		for (i = 0; i < MAX_STA_COUNT; i++) {
+			if (priv->vlan_sta_list[i] &&
+			    !moal_memcmp(priv->phandle,
+					 priv->vlan_sta_list[i]->peer_mac,
+					 (u8 *)mac_addr,
+					 MLAN_MAC_ADDR_LENGTH)) {
+				kfree(priv->vlan_sta_list[i]);
+				priv->vlan_sta_list[i] = NULL;
+				break;
+			}
+		}
+	}
+#endif
+#endif
+
 	LEAVE();
 	return 0;
 }
@@ -3732,6 +3779,10 @@ void woal_cac_timer_func(void *context)
 static void woal_switch_uap_channel(moal_private *priv, t_u8 wait_option)
 {
 	chan_band_info uap_channel;
+#if CFG80211_VERSION_CODE >= KERNEL_VERSION(6, 7, 0)
+	struct cfg80211_ap_update *info = container_of(
+		&priv->beacon_after, struct cfg80211_ap_update, beacon);
+#endif
 	t_u8 chan2Offset = SEC_CHAN_NONE;
 	ENTER();
 	woal_clear_all_mgmt_ies(priv, MOAL_IOCTL_WAIT);
@@ -3739,8 +3790,13 @@ static void woal_switch_uap_channel(moal_private *priv, t_u8 wait_option)
 		PRINTM(MERROR, "%s: stop uap failed \n", __func__);
 		goto done;
 	}
+
+#if CFG80211_VERSION_CODE >= KERNEL_VERSION(6, 7, 0)
+	if (woal_cfg80211_set_beacon(priv->wdev->wiphy, priv->netdev, info)) {
+#else
 	if (woal_cfg80211_set_beacon(priv->wdev->wiphy, priv->netdev,
 				     &priv->beacon_after)) {
+#endif
 		PRINTM(MERROR, "%s: set mgmt ies failed \n", __func__);
 		goto done;
 	}
@@ -3803,9 +3859,9 @@ static void woal_switch_uap_channel(moal_private *priv, t_u8 wait_option)
 	cfg80211_ch_switch_notify(priv->netdev, &priv->chan, 0, 0);
 #elif ((CFG80211_VERSION_CODE >= KERNEL_VERSION(5, 19, 2)) ||                  \
        IMX_ANDROID_13 || IMX_ANDROID_12_BACKPORT)
-	cfg80211_ch_switch_notify(priv->netdev, &priv->chan, 0);
+cfg80211_ch_switch_notify(priv->netdev, &priv->chan, 0);
 #else
-	cfg80211_ch_switch_notify(priv->netdev, &priv->chan);
+cfg80211_ch_switch_notify(priv->netdev, &priv->chan);
 #endif
 	if (priv->uap_tx_blocked) {
 		if (!netif_carrier_ok(priv->netdev))
@@ -4035,6 +4091,10 @@ int woal_cfg80211_channel_switch(struct wiphy *wiphy, struct net_device *dev,
 	moal_private *priv = (moal_private *)woal_get_netdev_priv(dev);
 	t_u32 chsw_msec;
 	mlan_uap_bss_param *bss_cfg = NULL;
+#if CFG80211_VERSION_CODE >= KERNEL_VERSION(6, 7, 0)
+	struct cfg80211_ap_update *info = container_of(
+		&params->beacon_csa, struct cfg80211_ap_update, beacon);
+#endif
 
 	ENTER();
 
@@ -4070,7 +4130,11 @@ int woal_cfg80211_channel_switch(struct wiphy *wiphy, struct net_device *dev,
 	}
 
 	woal_clear_all_mgmt_ies(priv, MOAL_IOCTL_WAIT);
+#if CFG80211_VERSION_CODE >= KERNEL_VERSION(6, 7, 0)
+	if (woal_cfg80211_set_beacon(wiphy, dev, info)) {
+#else
 	if (woal_cfg80211_set_beacon(wiphy, dev, &params->beacon_csa)) {
+#endif
 		PRINTM(MERROR, "%s: setting csa mgmt ies failed\n", __func__);
 		goto done;
 	}

@@ -4,7 +4,7 @@
  * driver.
  *
  *
- * Copyright 2008-2022 NXP
+ * Copyright 2008-2022, 2024 NXP
  *
  * This software file (the File) is distributed by NXP
  * under the terms of the GNU General Public License Version 2, June 1991
@@ -2213,7 +2213,7 @@ static int woal_uap_get_dfs_chan(t_u8 pri_chan, t_u8 bw,
  *
  * @return                N/A
  */
-void woal_set_channel_dfs_state(t_u8 channel, t_u8 dfs_state)
+static void woal_set_channel_dfs_state(t_u8 channel, t_u8 dfs_state)
 {
 	int index;
 	mlan_ds_11h_chan_dfs_state ch_dfs_state;

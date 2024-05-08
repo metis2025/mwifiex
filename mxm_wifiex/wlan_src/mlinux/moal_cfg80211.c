@@ -3,7 +3,7 @@
  * @brief This file contains the functions for CFG80211.
  *
  *
- * Copyright 2011-2023 NXP
+ * Copyright 2011-2024 NXP
  *
  * This software file (the File) is distributed by NXP
  * under the terms of the GNU General Public License Version 2, June 1991
@@ -206,8 +206,8 @@ void *woal_get_netdev_priv(struct net_device *dev)
  *
  *  @return           radio_type
  */
-struct ieee80211_channel *woal_get_ieee80211_channel(moal_private *priv,
-						     chan_band_info *pchan_info)
+static struct ieee80211_channel *
+woal_get_ieee80211_channel(moal_private *priv, chan_band_info *pchan_info)
 {
 	enum ieee80211_band band = IEEE80211_BAND_2GHZ;
 	int freq = 0;
@@ -2627,38 +2627,6 @@ void woal_cfg80211_mgmt_frame_register(struct wiphy *wiphy,
 	LEAVE();
 }
 
-#ifdef UAP_CFG80211
-#if KERNEL_VERSION(3, 12, 0) <= CFG80211_VERSION_CODE
-/*
- * @brief  prepare and send WOAL_EVENT_CANCEL_CHANRPT
- *
- * @param priv           A pointer moal_private structure
- *
- * @return          N/A
- */
-void woal_cancel_chanrpt_event(moal_private *priv)
-{
-	struct woal_event *evt;
-	unsigned long flags;
-	moal_handle *handle = priv->phandle;
-
-	evt = kzalloc(sizeof(struct woal_event), GFP_ATOMIC);
-	if (!evt) {
-		PRINTM(MERROR, "Fail to alloc memory for deauth event\n");
-		LEAVE();
-		return;
-	}
-	evt->priv = priv;
-	evt->type = WOAL_EVENT_CANCEL_CHANRPT;
-	INIT_LIST_HEAD(&evt->link);
-	spin_lock_irqsave(&handle->evt_lock, flags);
-	list_add_tail(&evt->link, &handle->evt_queue);
-	spin_unlock_irqrestore(&handle->evt_lock, flags);
-	queue_work(handle->evt_workqueue, &handle->evt_work);
-}
-#endif
-#endif
-
 #if CFG80211_VERSION_CODE >= KERNEL_VERSION(2, 6, 39)
 /*
  * @brief  check if we need set remain_on_channel
@@ -2668,9 +2636,9 @@ void woal_cancel_chanrpt_event(moal_private *priv)
  *
  * @return          MFALSE-no need set remain_on_channel
  */
-t_u8 woal_check_mgmt_tx_channel(moal_private *priv,
-				struct ieee80211_channel *chan,
-				unsigned int wait)
+static t_u8 woal_check_mgmt_tx_channel(moal_private *priv,
+				       struct ieee80211_channel *chan,
+				       unsigned int wait)
 {
 	int freq;
 	if (priv->bss_type == MLAN_BSS_TYPE_UAP)
@@ -2696,8 +2664,9 @@ t_u8 woal_check_mgmt_tx_channel(moal_private *priv,
  *
  * @return           0 -- success, otherwise fail
  */
-int woal_mgmt_tx(moal_private *priv, const u8 *buf, size_t len,
-		 struct ieee80211_channel *chan, u64 cookie, unsigned int wait)
+static int woal_mgmt_tx(moal_private *priv, const u8 *buf, size_t len,
+			struct ieee80211_channel *chan, u64 cookie,
+			unsigned int wait)
 {
 	int ret = 0;
 	pmlan_buffer pmbuf = NULL;
@@ -5198,7 +5167,9 @@ void woal_cfg80211_notify_channel(moal_private *priv,
 #if KERNEL_VERSION(3, 8, 0) <= CFG80211_VERSION_CODE
 	if (MLAN_STATUS_SUCCESS ==
 	    woal_chandef_create(priv, &chandef, pchan_info)) {
-#if KERNEL_VERSION(3, 14, 0) <= CFG80211_VERSION_CODE
+#if KERNEL_VERSION(6, 7, 0) <= CFG80211_VERSION_CODE
+		wiphy_lock(priv->wdev->wiphy);
+#elif KERNEL_VERSION(3, 14, 0) <= CFG80211_VERSION_CODE
 		mutex_lock(&priv->wdev->mtx);
 #endif
 #if CFG80211_VERSION_CODE >= KERNEL_VERSION(6, 3, 0)
@@ -5211,7 +5182,9 @@ void woal_cfg80211_notify_channel(moal_private *priv,
 #else
 		cfg80211_ch_switch_notify(priv->netdev, &chandef);
 #endif
-#if KERNEL_VERSION(3, 14, 0) <= CFG80211_VERSION_CODE
+#if KERNEL_VERSION(6, 7, 0) <= CFG80211_VERSION_CODE
+		wiphy_unlock(priv->wdev->wiphy);
+#elif KERNEL_VERSION(3, 14, 0) <= CFG80211_VERSION_CODE
 		mutex_unlock(&priv->wdev->mtx);
 #endif
 		priv->channel = pchan_info->channel;

@@ -106,7 +106,8 @@ CONFIG_MULTI_CHAN_SUPPORT=y
 
 CONFIG_DUMP_TO_PROC=y
 
-CONFIG_TASKLET_SUPPORT=y
+CONFIG_TASKLET_SUPPORT=n
+
 
 
 #32bit app over 64bit kernel support
@@ -154,7 +155,7 @@ APPDIR= $(shell if test -d "mapp"; then echo mapp; fi)
 #############################################################################
 
 	ccflags-y += -I$(KERNELDIR)/include
-	ccflags-y += -DMLAN_RELEASE_VERSION='"437.p8"'
+	ccflags-y += -DMLAN_RELEASE_VERSION='"437.p18"'
 
 	ccflags-y += -DFPNUM='"92"'
 
@@ -275,6 +276,10 @@ ifeq ($(CONFIG_SDIW624),y)
 	CONFIG_SDIO=y
 	ccflags-y += -DSDIW624
 endif
+ifeq ($(CONFIG_SDAW693),y)
+	CONFIG_SDIO=y
+	ccflags-y += -DSDAW693
+endif
 ifeq ($(CONFIG_SD9177),y)
 	CONFIG_SDIO=y
 	ccflags-y += -DSD9177
@@ -334,6 +339,10 @@ endif
 ifeq ($(CONFIG_PCIEIW624),y)
 	CONFIG_PCIE=y
 	ccflags-y += -DPCIEIW624
+endif
+ifeq ($(CONFIG_PCIEAW693),y)
+	CONFIG_PCIE=y
+	ccflags-y += -DPCIEAW693
 endif
 ifeq ($(CONFIG_SDIO),y)
 	ccflags-y += -DSDIO
