@@ -2780,8 +2780,8 @@ static mlan_status wlan_process_defer_event(moal_handle *handle,
  *
  *  @return         N/A
  */
-t_void woal_process_event_tx_status(moal_private *priv,
-				    tx_mgmt_status_event *tx_status)
+static t_void woal_process_event_tx_status(moal_private *priv,
+					   tx_mgmt_status_event *tx_status)
 {
 	unsigned long flag;
 #if defined(STA_CFG80211) || defined(UAP_CFG80211)
