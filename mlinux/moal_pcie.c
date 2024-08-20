@@ -699,6 +699,12 @@ static void woal_pcie_shutdown(struct pci_dev *dev)
 		return;
 	}
 	handle = card->handle;
+	if (!handle) {
+		PRINTM(MINFO, "PCIE card handle is null!\n");
+		pci_disable_device(dev);
+		LEAVE();
+		return;
+	}
 	if (handle->second_mac)
 		goto done;
 #if defined(PCIE9098) || defined(PCIE9097) || defined(PCIEAW693) ||            \
