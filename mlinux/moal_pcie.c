@@ -681,8 +681,7 @@ static void woal_pcie_shutdown(struct pci_dev *dev)
 	}
 	handle = card->handle;
 	if (!handle) {
-		PRINTM(MINFO, "PCIE card handle is null!\n");
-		pci_disable_device(dev);
+		PRINTM(MINFO, "Invalid handle\n");
 		LEAVE();
 		return;
 	}

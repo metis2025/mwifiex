@@ -708,7 +708,6 @@ void woal_sdio_shutdown(struct device *dev)
 			PRINTM(MMSG, "Shutdown not allowed\n");
 			goto done;
 		}
-		woal_sched_timeout(200);
 		woal_enable_hs(woal_get_priv(handle, MLAN_BSS_ROLE_ANY));
 
 		wait_event_interruptible_timeout(
@@ -828,6 +827,7 @@ int woal_sdio_suspend(struct device *dev)
 #ifdef MMC_PM_FUNC_SUSPENDED
 		handle->suspend_notify_req = MTRUE;
 #endif
+		woal_sched_timeout(200);
 		hs_actived = woal_enable_hs(
 			woal_get_priv(handle, MLAN_BSS_ROLE_ANY));
 #ifdef MMC_PM_FUNC_SUSPENDED

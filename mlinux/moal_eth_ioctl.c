@@ -449,6 +449,7 @@ static int woal_set_priv_11axcmdcfg_llde_pkt_filer_cmd(
 	t_u8 peer_mac[ETH_ALEN] = {0};
 	t_u8 convert_int[2] = {0};
 	int tmp_val = 0;
+	t_u8 *tmp_pos = NULL;
 
 	/* if llde device_filter or macfilter is not present in config file then
 	 * return */
@@ -477,7 +478,8 @@ static int woal_set_priv_11axcmdcfg_llde_pkt_filer_cmd(
 		llde_pkt_filter_pos =
 			llde_pkt_filter_pos + strlen("macfilter1=");
 
-	if (llde_pkt_filter_pos && (llde_pkt_filter_pos + MAC_STRING_LENGTH)) {
+	tmp_pos = llde_pkt_filter_pos + MAC_STRING_LENGTH;
+	if (llde_pkt_filter_pos && tmp_pos) {
 		moal_memcpy_ext(priv->phandle, (t_u8 *)mac_pos,
 				(t_u8 *)llde_pkt_filter_pos, MAC_STRING_LENGTH,
 				MAC_STRING_LENGTH);
@@ -491,7 +493,8 @@ static int woal_set_priv_11axcmdcfg_llde_pkt_filer_cmd(
 		llde_pkt_filter_pos =
 			llde_pkt_filter_pos + strlen("macfilter2=");
 
-	if (llde_pkt_filter_pos && (llde_pkt_filter_pos + MAC_STRING_LENGTH)) {
+	tmp_pos = llde_pkt_filter_pos + MAC_STRING_LENGTH;
+	if (llde_pkt_filter_pos && tmp_pos) {
 		moal_memcpy_ext(priv->phandle, (t_u8 *)mac_pos,
 				(t_u8 *)llde_pkt_filter_pos, MAC_STRING_LENGTH,
 				MAC_STRING_LENGTH);
