@@ -5272,6 +5272,17 @@ mlan_status wlan_adapter_init_cmd(pmlan_adapter pmadapter)
 		}
 	}
 #endif
+	if (pmpriv && (pmadapter->init_para.disable_11h_tpc)) {
+		/* Send command to FW to disable 11h tpc */
+		ret = wlan_prepare_cmd(pmpriv, HostCmd_CMD_802_11_SNMP_MIB,
+				       HostCmd_ACT_GEN_SET,
+				       Dot11h_disable_tpc_i, MNULL,
+				       &pmadapter->init_para.disable_11h_tpc);
+		if (ret) {
+			ret = MLAN_STATUS_FAILURE;
+			goto done;
+		}
+	}
 #ifdef STA_SUPPORT
 	if (pmpriv_sta && (pmadapter->ps_mode == Wlan802_11PowerModePSP)) {
 		ret = wlan_prepare_cmd(pmpriv_sta,
@@ -5405,6 +5416,7 @@ mlan_status wlan_adapter_init_cmd(pmlan_adapter pmadapter)
 		ret = MLAN_STATUS_FAILURE;
 		goto done;
 	}
+
 	ret = MLAN_STATUS_PENDING;
 done:
 	LEAVE();

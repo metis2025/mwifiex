@@ -6101,13 +6101,19 @@ mlan_status woal_cancel_scan(moal_private *priv, t_u8 wait_option)
 #ifdef STA_CFG80211
 	unsigned long flags;
 #endif
+
+#ifdef STA_CFG80211
+	// cancel scan timeout
+	if (IS_STA_CFG80211(handle->params.cfg80211_wext) &&
+	    handle->scan_request)
+		cancel_delayed_work(&handle->scan_timeout_work);
+#endif
 	/* If scan is in process, cancel the scan command */
 	if (!handle->scan_pending_on_block || !scan_priv) {
 #ifdef STA_CFG80211
 		spin_lock_irqsave(&handle->scan_req_lock, flags);
 		if (IS_STA_CFG80211(handle->params.cfg80211_wext) &&
 		    handle->scan_request) {
-			cancel_delayed_work(&handle->scan_timeout_work);
 			/* some supplicant cannot handle SCAN abort event */
 			if (scan_priv &&
 			    (scan_priv->bss_type == MLAN_BSS_TYPE_STA))
@@ -6138,7 +6144,6 @@ mlan_status woal_cancel_scan(moal_private *priv, t_u8 wait_option)
 	spin_lock_irqsave(&handle->scan_req_lock, flags);
 	if (IS_STA_CFG80211(handle->params.cfg80211_wext) &&
 	    handle->scan_request) {
-		cancel_delayed_work(&handle->scan_timeout_work);
 		/** some supplicant can not handle SCAN abort event */
 		if (scan_priv->bss_type == MLAN_BSS_TYPE_STA)
 			woal_cfg80211_scan_done(handle->scan_request, MTRUE);

@@ -408,6 +408,7 @@ typedef enum _MOAL_HARDWARE_STATUS {
 #define WIFI_STATUS_SCAN_TIMEOUT 8
 #define WIFI_STATUS_FW_DUMP 9
 #define WIFI_STATUS_FW_RELOAD 10
+#define WIFI_STATUS_FW_RECOVERY_FAIL 11
 
 /** fw cap info 11p */
 #define FW_CAPINFO_80211P MBIT(24)
@@ -2124,6 +2125,7 @@ typedef struct _card_info {
 	t_u8 func1_reg_end;
 	t_u32 slew_rate_reg;
 	t_u8 slew_rate_bit_offset;
+	t_u32 fw_winner_status_reg;
 #endif
 #if defined(SDIO) || defined(PCIE)
 	t_u32 fw_stuck_code_reg;
@@ -2724,6 +2726,8 @@ typedef struct _moal_mod_para {
 	int dual_nb;
 	/* reject addba req config for HS or FW Auto-reconnect */
 	t_u32 reject_addba_req;
+	/** disable_11h_tpc setting */
+	int disable_11h_tpc;
 } moal_mod_para;
 
 void woal_tp_acnt_timer_func(void *context);
@@ -3265,6 +3269,7 @@ struct _moal_handle {
 #endif
 	t_u32 ips_ctrl;
 	BOOLEAN is_edmac_enabled;
+	bool driver_init;
 };
 
 /**
@@ -4330,6 +4335,7 @@ moal_private *woal_add_interface(moal_handle *handle, t_u8 bss_num,
 				 t_u8 bss_type);
 void woal_clean_up(moal_handle *handle);
 void woal_send_auto_recovery_complete_event(moal_handle *handle);
+void woal_send_auto_recovery_failure_event(moal_handle *handle);
 void woal_remove_interface(moal_handle *handle, t_u8 bss_index);
 void woal_set_multicast_list(struct net_device *dev);
 mlan_status woal_request_fw(moal_handle *handle);

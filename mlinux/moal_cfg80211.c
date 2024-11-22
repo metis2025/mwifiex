@@ -1314,8 +1314,8 @@ int woal_cfg80211_change_virtual_intf(struct wiphy *wiphy,
 #endif /* WIFI_DIRECT_SUPPORT */
 #if defined(STA_SUPPORT) && defined(UAP_SUPPORT)
 		if (priv->bss_type == MLAN_BSS_TYPE_UAP) {
-#if ((CFG80211_VERSION_CODE >= KERNEL_VERSION(5, 19, 2)) || IMX_ANDROID_13 ||  \
-     IMX_ANDROID_12_BACKPORT)
+#if ((CFG80211_VERSION_CODE >= KERNEL_VERSION(5, 19, 2)) ||                    \
+     (defined(ANDROID_SDK_VERSION) && ANDROID_SDK_VERSION >= 31))
 			woal_cfg80211_del_beacon(wiphy, dev, 0);
 #else
 			woal_cfg80211_del_beacon(wiphy, dev);
@@ -1554,7 +1554,8 @@ fail:
  */
 #endif
 int woal_cfg80211_add_key(struct wiphy *wiphy, struct net_device *netdev,
-#if ((KERNEL_VERSION(6, 1, 0) <= LINUX_VERSION_CODE) || IMX_ANDROID_13)
+#if ((KERNEL_VERSION(6, 1, 0) <= LINUX_VERSION_CODE) ||                        \
+     (defined(ANDROID_SDK_VERSION) && ANDROID_SDK_VERSION >= 33))
 			  int link_id,
 #endif
 			  t_u8 key_index,
@@ -1630,7 +1631,8 @@ int woal_cfg80211_add_key(struct wiphy *wiphy, struct net_device *netdev,
  */
 #endif
 int woal_cfg80211_del_key(struct wiphy *wiphy, struct net_device *netdev,
-#if ((KERNEL_VERSION(6, 1, 0) <= LINUX_VERSION_CODE) || IMX_ANDROID_13)
+#if ((KERNEL_VERSION(6, 1, 0) <= LINUX_VERSION_CODE) ||                        \
+     (defined(ANDROID_SDK_VERSION) && ANDROID_SDK_VERSION >= 33))
 			  int link_id,
 #endif
 			  t_u8 key_index,
@@ -1647,13 +1649,9 @@ int woal_cfg80211_del_key(struct wiphy *wiphy, struct net_device *netdev,
 		LEAVE();
 		return -EFAULT;
 	}
-	/* del_key will be trigger from cfg80211_rx_mlme_mgmt funtion
-	 * where we receive deauth/disassoicate packet in rx_work
-	 * use MOAL_NO_WAIT to avoid dead lock
-	 */
 	if (MLAN_STATUS_FAILURE ==
 	    woal_cfg80211_set_key(priv, 0, 0, NULL, 0, NULL, 0, key_index,
-				  mac_addr, 1, 0, MOAL_NO_WAIT)) {
+				  mac_addr, 1, 0, MOAL_IOCTL_WAIT)) {
 		PRINTM(MERROR, "Error deleting the crypto keys\n");
 		LEAVE();
 		return -EFAULT;
@@ -1689,7 +1687,8 @@ int woal_cfg80211_del_key(struct wiphy *wiphy, struct net_device *netdev,
 #endif
 int woal_cfg80211_set_default_key(struct wiphy *wiphy,
 				  struct net_device *netdev,
-#if ((KERNEL_VERSION(6, 1, 0) <= LINUX_VERSION_CODE) || IMX_ANDROID_13)
+#if ((KERNEL_VERSION(6, 1, 0) <= LINUX_VERSION_CODE) ||                        \
+     (defined(ANDROID_SDK_VERSION) && ANDROID_SDK_VERSION >= 33))
 				  int link_id,
 #endif
 				  t_u8 key_index
@@ -1728,7 +1727,8 @@ int woal_cfg80211_set_default_key(struct wiphy *wiphy,
 #if KERNEL_VERSION(2, 6, 30) <= CFG80211_VERSION_CODE
 int woal_cfg80211_set_default_mgmt_key(struct wiphy *wiphy,
 				       struct net_device *netdev,
-#if ((KERNEL_VERSION(6, 1, 0) <= LINUX_VERSION_CODE) || IMX_ANDROID_13)
+#if ((KERNEL_VERSION(6, 1, 0) <= LINUX_VERSION_CODE) ||                        \
+     (defined(ANDROID_SDK_VERSION) && ANDROID_SDK_VERSION >= 33))
 				       int link_id,
 #endif
 				       t_u8 key_index)
@@ -1742,7 +1742,8 @@ int woal_cfg80211_set_default_mgmt_key(struct wiphy *wiphy,
 #if KERNEL_VERSION(5, 10, 0) <= CFG80211_VERSION_CODE
 int woal_cfg80211_set_default_beacon_key(struct wiphy *wiphy,
 					 struct net_device *netdev,
-#if ((KERNEL_VERSION(6, 1, 0) <= LINUX_VERSION_CODE) || IMX_ANDROID_13)
+#if ((KERNEL_VERSION(6, 1, 0) <= LINUX_VERSION_CODE) ||                        \
+     (defined(ANDROID_SDK_VERSION) && ANDROID_SDK_VERSION >= 33))
 					 int link_id,
 #endif
 					 t_u8 key_index)
@@ -2329,8 +2330,8 @@ done:
  * @return                0 -- success, otherwise fail
  */
 int woal_cfg80211_set_bitrate_mask(struct wiphy *wiphy, struct net_device *dev,
-#if ((CFG80211_VERSION_CODE >= KERNEL_VERSION(5, 19, 2)) || IMX_ANDROID_13 ||  \
-     IMX_ANDROID_12_BACKPORT)
+#if ((CFG80211_VERSION_CODE >= KERNEL_VERSION(5, 19, 2)) ||                    \
+     (defined(ANDROID_SDK_VERSION) && ANDROID_SDK_VERSION >= 31))
 				   unsigned int link_id,
 #endif
 				   const u8 *peer,
@@ -5476,11 +5477,11 @@ void woal_cfg80211_notify_channel(moal_private *priv,
 	CFG80211_VERSION_CODE < KERNEL_VERSION(6, 9, 0)
 		cfg80211_ch_switch_notify(priv->netdev, &chandef, 0, 0);
 #elif ((CFG80211_VERSION_CODE >= KERNEL_VERSION(6, 1, 0) &&                    \
-	IMX_ANDROID_13)) &&                                                    \
+	(defined(ANDROID_SDK_VERSION) && ANDROID_SDK_VERSION >= 33))) &&       \
 	CFG80211_VERSION_CODE < KERNEL_VERSION(6, 9, 0)
 		cfg80211_ch_switch_notify(priv->netdev, &chandef, 0, 0);
 #elif ((CFG80211_VERSION_CODE >= KERNEL_VERSION(5, 19, 2)) ||                  \
-       IMX_ANDROID_13 || IMX_ANDROID_12_BACKPORT)
+       (defined(ANDROID_SDK_VERSION) && ANDROID_SDK_VERSION >= 31))
 		cfg80211_ch_switch_notify(priv->netdev, &chandef, 0);
 #else
 		cfg80211_ch_switch_notify(priv->netdev, &chandef);

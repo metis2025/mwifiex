@@ -2042,6 +2042,7 @@ typedef struct _mlan_init_para {
 	t_u16 tx_budget;
 	t_u8 mclient_scheduling;
 	t_u32 reject_addba_req;
+	t_u8 disable_11h_tpc;
 } mlan_init_para, *pmlan_init_para;
 
 #ifdef SDIO

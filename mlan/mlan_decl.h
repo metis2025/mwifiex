@@ -2782,6 +2782,7 @@ typedef struct _mlan_device {
 	t_u32 max_tx_pending;
 	t_u16 tx_budget;
 	t_u8 mclient_scheduling;
+	t_u8 disable_11h_tpc;
 } mlan_device, *pmlan_device;
 
 /** MLAN API function prototype */

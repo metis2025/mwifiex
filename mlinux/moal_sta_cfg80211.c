@@ -135,8 +135,8 @@ static int woal_cfg80211_dump_survey(struct wiphy *wiphy,
 #if CFG80211_VERSION_CODE >= KERNEL_VERSION(3, 8, 0)
 static int woal_cfg80211_get_channel(struct wiphy *wiphy,
 				     struct wireless_dev *wdev,
-#if ((CFG80211_VERSION_CODE >= KERNEL_VERSION(5, 19, 2)) || IMX_ANDROID_13 ||  \
-     IMX_ANDROID_12_BACKPORT)
+#if ((CFG80211_VERSION_CODE >= KERNEL_VERSION(5, 19, 2)) ||                    \
+     (defined(ANDROID_SDK_VERSION) && ANDROID_SDK_VERSION >= 31))
 				     unsigned int link_id,
 #endif
 				     struct cfg80211_chan_def *chandef);
@@ -2841,7 +2841,9 @@ void woal_host_mlme_process_assoc_timeout(moal_private *priv,
 					  struct cfg80211_bss *bss)
 {
 	/* Send Assoc Failure with Timeout to CFG80211 */
-#if CFG80211_VERSION_CODE >= KERNEL_VERSION(6, 0, 0)
+#if (CFG80211_VERSION_CODE >= KERNEL_VERSION(6, 0, 0) ||                       \
+     (defined(ANDROID_SDK_VERSION) && ANDROID_SDK_VERSION >= 33 &&             \
+      CFG80211_VERSION_CODE >= KERNEL_VERSION(5, 15, 74)))
 	struct cfg80211_assoc_failure data;
 	memset(&data, 0, sizeof(struct cfg80211_assoc_failure));
 	data.timeout = 1;
@@ -2877,7 +2879,8 @@ void woal_host_mlme_process_assoc_resp(moal_private *priv,
 	struct cfg80211_rx_assoc_resp_data resp = {
 		.uapsd_queues = -1,
 	};
-#elif ((CFG80211_VERSION_CODE >= KERNEL_VERSION(6, 0, 0)) || IMX_ANDROID_14)
+#elif ((CFG80211_VERSION_CODE >= KERNEL_VERSION(6, 0, 0)) ||                   \
+       (defined(ANDROID_SDK_VERSION) && ANDROID_SDK_VERSION >= 34))
 	struct cfg80211_rx_assoc_resp resp = {
 		.uapsd_queues = -1,
 	};
@@ -2950,7 +2953,8 @@ void woal_host_mlme_process_assoc_resp(moal_private *priv,
 						}
 					}
 
-#if ((CFG80211_VERSION_CODE >= KERNEL_VERSION(6, 0, 0)) || IMX_ANDROID_14)
+#if ((CFG80211_VERSION_CODE >= KERNEL_VERSION(6, 0, 0)) ||                     \
+     (defined(ANDROID_SDK_VERSION) && ANDROID_SDK_VERSION >= 34))
 					resp.links[0].bss = bss;
 					resp.buf = assoc_info->assoc_resp_buf;
 					resp.len = assoc_info->assoc_resp_len;
@@ -5021,7 +5025,9 @@ static int woal_cfg80211_scan(struct wiphy *wiphy, struct net_device *dev,
 			if (chan->flags & IEEE80211_CHAN_PASSIVE_SCAN)
 				scan_req->chan_list[num_chans].scan_time =
 					INIT_PASSIVE_SCAN_CHAN_TIME;
-			else if (priv->bss_type == MLAN_BSS_TYPE_STA) {
+			else if (priv->bss_type == MLAN_BSS_TYPE_STA &&
+				 scan_req->chan_list[num_chans].scan_type ==
+					 MLAN_SCAN_TYPE_PASSIVE) {
 				/*
 				 * Set passive scan time to 110ms to discover
 				 * all nearby AP's, Current 40ms passive scan
@@ -5034,20 +5040,17 @@ static int woal_cfg80211_scan(struct wiphy *wiphy, struct net_device *dev,
 				 * 1. STA is in connected state
 				 * 2. Scan type is passive
 				 */
-				if (scan_req->chan_list[num_chans].scan_type ==
-				    MLAN_SCAN_TYPE_PASSIVE)
-					scan_req->chan_list[num_chans]
-						.scan_time =
-						PASSIVE_SCAN_CHAN_TIME;
-			} else
+				scan_req->chan_list[num_chans].scan_time =
+					PASSIVE_SCAN_CHAN_TIME;
+			} else {
 				scan_req->chan_list[num_chans].scan_time = MIN(
 					MIN_SPECIFIC_SCAN_CHAN_TIME,
 					scan_cfg.scan_time.specific_scan_time);
+			}
 		}
 #endif
 #ifdef UAP_CFG80211
 		if (GET_BSS_ROLE(priv) == MLAN_BSS_ROLE_UAP) {
-			scan_req->scan_chan_gap = 0;
 			if (!woal_is_uap_scan_result_expired(priv))
 				scan_req->chan_list[num_chans].scan_time =
 					MIN_SPECIFIC_SCAN_CHAN_TIME;
@@ -5850,8 +5853,8 @@ static int woal_cfg80211_disconnect(struct wiphy *wiphy, struct net_device *dev,
 	if (priv->media_connected == MFALSE) {
 		PRINTM(MMSG, " Already disconnected\n");
 #if CFG80211_VERSION_CODE >= KERNEL_VERSION(3, 11, 0)
-#if ((CFG80211_VERSION_CODE >= KERNEL_VERSION(5, 19, 2)) || IMX_ANDROID_13 ||  \
-     IMX_ANDROID_12_BACKPORT)
+#if ((CFG80211_VERSION_CODE >= KERNEL_VERSION(5, 19, 2)) ||                    \
+     (defined(ANDROID_SDK_VERSION) && ANDROID_SDK_VERSION >= 31))
 		if (priv->wdev->connected &&
 #else
 		if (priv->wdev->current_bss &&
@@ -6205,8 +6208,8 @@ done:
 #if CFG80211_VERSION_CODE >= KERNEL_VERSION(3, 8, 0)
 static int woal_cfg80211_get_channel(struct wiphy *wiphy,
 				     struct wireless_dev *wdev,
-#if ((CFG80211_VERSION_CODE >= KERNEL_VERSION(5, 19, 2)) || IMX_ANDROID_13 ||  \
-     IMX_ANDROID_12_BACKPORT)
+#if ((CFG80211_VERSION_CODE >= KERNEL_VERSION(5, 19, 2)) ||                    \
+     (defined(ANDROID_SDK_VERSION) && ANDROID_SDK_VERSION >= 31))
 				     unsigned int link_id,
 #endif
 				     struct cfg80211_chan_def *chandef)
@@ -9277,8 +9280,8 @@ int woal_cfg80211_update_ft_ies(struct wiphy *wiphy, struct net_device *dev,
 			passoc_rsp = (IEEEtypes_AssocRsp_t *)
 					     assoc_rsp->assoc_resp_buf;
 #if CFG80211_VERSION_CODE >= KERNEL_VERSION(4, 12, 0)
-#if ((CFG80211_VERSION_CODE >= KERNEL_VERSION(6, 0, 0)) || IMX_ANDROID_13 ||   \
-     IMX_ANDROID_14 || IMX_ANDROID_12_BACKPORT)
+#if ((CFG80211_VERSION_CODE >= KERNEL_VERSION(6, 0, 0)) ||                     \
+     (defined(ANDROID_SDK_VERSION) && ANDROID_SDK_VERSION >= 31))
 			roam_info.links[0].bssid = priv->cfg_bssid;
 #else
 			roam_info.bssid = priv->cfg_bssid;
@@ -9757,8 +9760,8 @@ void woal_start_roaming(moal_private *priv)
 		}
 #endif
 #if CFG80211_VERSION_CODE >= KERNEL_VERSION(4, 12, 0)
-#if ((CFG80211_VERSION_CODE >= KERNEL_VERSION(6, 0, 0)) || IMX_ANDROID_13 ||   \
-     IMX_ANDROID_14 || IMX_ANDROID_12_BACKPORT)
+#if ((CFG80211_VERSION_CODE >= KERNEL_VERSION(6, 0, 0)) ||                     \
+     (defined(ANDROID_SDK_VERSION) && ANDROID_SDK_VERSION >= 31))
 		roam_info.links[0].bssid = priv->cfg_bssid;
 #else
 		roam_info.bssid = priv->cfg_bssid;
@@ -9839,7 +9842,8 @@ int woal_cfg80211_uap_add_station(struct wiphy *wiphy, struct net_device *dev,
 	if (params->ext_capab_len)
 		req_len += sizeof(MrvlIEtypesHeader_t) + params->ext_capab_len;
 #endif
-#if ((CFG80211_VERSION_CODE >= KERNEL_VERSION(6, 0, 0)) || IMX_ANDROID_14)
+#if ((CFG80211_VERSION_CODE >= KERNEL_VERSION(6, 0, 0)) ||                     \
+     (defined(ANDROID_SDK_VERSION) && ANDROID_SDK_VERSION >= 34))
 	if (params->link_sta_params.supported_rates_len)
 		req_len += sizeof(MrvlIEtypesHeader_t) +
 			   params->link_sta_params.supported_rates_len;
@@ -9850,14 +9854,16 @@ int woal_cfg80211_uap_add_station(struct wiphy *wiphy, struct net_device *dev,
 #endif
 	if (params->uapsd_queues || params->max_sp)
 		req_len += sizeof(MrvlIEtypesHeader_t) + sizeof(qosinfo);
-#if ((CFG80211_VERSION_CODE >= KERNEL_VERSION(6, 0, 0)) || IMX_ANDROID_14)
+#if ((CFG80211_VERSION_CODE >= KERNEL_VERSION(6, 0, 0)) ||                     \
+     (defined(ANDROID_SDK_VERSION) && ANDROID_SDK_VERSION >= 34))
 	if (params->link_sta_params.ht_capa)
 #else
 	if (params->ht_capa)
 #endif
 		req_len += sizeof(MrvlIEtypesHeader_t) +
 			   sizeof(struct ieee80211_ht_cap);
-#if ((CFG80211_VERSION_CODE >= KERNEL_VERSION(6, 0, 0)) || IMX_ANDROID_14)
+#if ((CFG80211_VERSION_CODE >= KERNEL_VERSION(6, 0, 0)) ||                     \
+     (defined(ANDROID_SDK_VERSION) && ANDROID_SDK_VERSION >= 34))
 	if (params->link_sta_params.vht_capa)
 #else
 	if (params->vht_capa)
@@ -9865,7 +9871,8 @@ int woal_cfg80211_uap_add_station(struct wiphy *wiphy, struct net_device *dev,
 		req_len += sizeof(MrvlIEtypesHeader_t) +
 			   sizeof(struct ieee80211_vht_cap);
 #if CFG80211_VERSION_CODE >= KERNEL_VERSION(3, 14, 0)
-#if ((CFG80211_VERSION_CODE >= KERNEL_VERSION(6, 0, 0)) || IMX_ANDROID_14)
+#if ((CFG80211_VERSION_CODE >= KERNEL_VERSION(6, 0, 0)) ||                     \
+     (defined(ANDROID_SDK_VERSION) && ANDROID_SDK_VERSION >= 34))
 	if (params->link_sta_params.opmode_notif_used)
 		req_len += sizeof(MrvlIEtypesHeader_t) + sizeof(u8);
 #else
@@ -9875,7 +9882,8 @@ int woal_cfg80211_uap_add_station(struct wiphy *wiphy, struct net_device *dev,
 #endif
 
 #if CFG80211_VERSION_CODE >= KERNEL_VERSION(4, 20, 0)
-#if ((CFG80211_VERSION_CODE >= KERNEL_VERSION(6, 0, 0)) || IMX_ANDROID_14)
+#if ((CFG80211_VERSION_CODE >= KERNEL_VERSION(6, 0, 0)) ||                     \
+     (defined(ANDROID_SDK_VERSION) && ANDROID_SDK_VERSION >= 34))
 	if (params->link_sta_params.he_capa_len)
 		req_len += sizeof(MrvlExtIEtypesHeader_t) +
 			   params->link_sta_params.he_capa_len;
@@ -9931,20 +9939,23 @@ int woal_cfg80211_uap_add_station(struct wiphy *wiphy, struct net_device *dev,
 		tlv = (MrvlIEtypes_Data_t *)pos;
 	}
 #endif
-#if ((CFG80211_VERSION_CODE >= KERNEL_VERSION(6, 0, 0)) || IMX_ANDROID_14)
+#if ((CFG80211_VERSION_CODE >= KERNEL_VERSION(6, 0, 0)) ||                     \
+     (defined(ANDROID_SDK_VERSION) && ANDROID_SDK_VERSION >= 34))
 	if (params->link_sta_params.supported_rates_len) {
 #else
 	if (params->supported_rates_len) {
 #endif
 		tlv = (MrvlIEtypes_Data_t *)pos;
 		tlv->header.type = SUPPORTED_RATES;
-#if ((CFG80211_VERSION_CODE >= KERNEL_VERSION(6, 0, 0)) || IMX_ANDROID_14)
+#if ((CFG80211_VERSION_CODE >= KERNEL_VERSION(6, 0, 0)) ||                     \
+     (defined(ANDROID_SDK_VERSION) && ANDROID_SDK_VERSION >= 34))
 		tlv->header.len = params->link_sta_params.supported_rates_len;
 #else
 		tlv->header.len = params->supported_rates_len;
 #endif
 		moal_memcpy_ext(priv->phandle, tlv->data,
-#if ((CFG80211_VERSION_CODE >= KERNEL_VERSION(6, 0, 0)) || IMX_ANDROID_14)
+#if ((CFG80211_VERSION_CODE >= KERNEL_VERSION(6, 0, 0)) ||                     \
+     (defined(ANDROID_SDK_VERSION) && ANDROID_SDK_VERSION >= 34))
 				params->link_sta_params.supported_rates,
 				tlv->header.len,
 #else
@@ -9968,7 +9979,8 @@ int woal_cfg80211_uap_add_station(struct wiphy *wiphy, struct net_device *dev,
 			sizeof(MrvlIEtypesHeader_t) + tlv->header.len;
 		tlv = (MrvlIEtypes_Data_t *)pos;
 	}
-#if ((CFG80211_VERSION_CODE >= KERNEL_VERSION(6, 0, 0)) || IMX_ANDROID_14)
+#if ((CFG80211_VERSION_CODE >= KERNEL_VERSION(6, 0, 0)) ||                     \
+     (defined(ANDROID_SDK_VERSION) && ANDROID_SDK_VERSION >= 34))
 	if (params->link_sta_params.ht_capa) {
 #else
 	if (params->ht_capa) {
@@ -9976,7 +9988,8 @@ int woal_cfg80211_uap_add_station(struct wiphy *wiphy, struct net_device *dev,
 		tlv = (MrvlIEtypes_Data_t *)pos;
 		tlv->header.type = HT_CAPABILITY;
 		tlv->header.len = sizeof(struct ieee80211_ht_cap);
-#if ((CFG80211_VERSION_CODE >= KERNEL_VERSION(6, 0, 0)) || IMX_ANDROID_14)
+#if ((CFG80211_VERSION_CODE >= KERNEL_VERSION(6, 0, 0)) ||                     \
+     (defined(ANDROID_SDK_VERSION) && ANDROID_SDK_VERSION >= 34))
 		moal_memcpy_ext(priv->phandle, tlv->data,
 				params->link_sta_params.ht_capa,
 #else
@@ -9988,7 +10001,8 @@ int woal_cfg80211_uap_add_station(struct wiphy *wiphy, struct net_device *dev,
 			sizeof(MrvlIEtypesHeader_t) + tlv->header.len;
 		tlv = (MrvlIEtypes_Data_t *)pos;
 	}
-#if ((CFG80211_VERSION_CODE >= KERNEL_VERSION(6, 0, 0)) || IMX_ANDROID_14)
+#if ((CFG80211_VERSION_CODE >= KERNEL_VERSION(6, 0, 0)) ||                     \
+     (defined(ANDROID_SDK_VERSION) && ANDROID_SDK_VERSION >= 34))
 	if (params->link_sta_params.vht_capa) {
 #else
 	if (params->vht_capa) {
@@ -9996,7 +10010,8 @@ int woal_cfg80211_uap_add_station(struct wiphy *wiphy, struct net_device *dev,
 		tlv = (MrvlIEtypes_Data_t *)pos;
 		tlv->header.type = VHT_CAPABILITY;
 		tlv->header.len = sizeof(struct ieee80211_vht_cap);
-#if ((CFG80211_VERSION_CODE >= KERNEL_VERSION(6, 0, 0)) || IMX_ANDROID_14)
+#if ((CFG80211_VERSION_CODE >= KERNEL_VERSION(6, 0, 0)) ||                     \
+     (defined(ANDROID_SDK_VERSION) && ANDROID_SDK_VERSION >= 34))
 		moal_memcpy_ext(priv->phandle, tlv->data,
 				params->link_sta_params.vht_capa,
 #else
@@ -10009,7 +10024,8 @@ int woal_cfg80211_uap_add_station(struct wiphy *wiphy, struct net_device *dev,
 		tlv = (MrvlIEtypes_Data_t *)pos;
 	}
 #if CFG80211_VERSION_CODE >= KERNEL_VERSION(3, 14, 0)
-#if ((CFG80211_VERSION_CODE >= KERNEL_VERSION(6, 0, 0)) || IMX_ANDROID_14)
+#if ((CFG80211_VERSION_CODE >= KERNEL_VERSION(6, 0, 0)) ||                     \
+     (defined(ANDROID_SDK_VERSION) && ANDROID_SDK_VERSION >= 34))
 	if (params->link_sta_params.opmode_notif_used) {
 #else
 	if (params->opmode_notif_used) {
@@ -10017,7 +10033,8 @@ int woal_cfg80211_uap_add_station(struct wiphy *wiphy, struct net_device *dev,
 		tlv = (MrvlIEtypes_Data_t *)pos;
 		tlv->header.type = OPER_MODE_NTF;
 		tlv->header.len = sizeof(u8);
-#if ((CFG80211_VERSION_CODE >= KERNEL_VERSION(6, 0, 0)) || IMX_ANDROID_14)
+#if ((CFG80211_VERSION_CODE >= KERNEL_VERSION(6, 0, 0)) ||                     \
+     (defined(ANDROID_SDK_VERSION) && ANDROID_SDK_VERSION >= 34))
 		moal_memcpy_ext(priv->phandle, tlv->data,
 				&params->link_sta_params.opmode_notif,
 #else
@@ -10030,7 +10047,8 @@ int woal_cfg80211_uap_add_station(struct wiphy *wiphy, struct net_device *dev,
 		tlv = (MrvlIEtypes_Data_t *)pos;
 	}
 #endif
-#if ((CFG80211_VERSION_CODE >= KERNEL_VERSION(6, 0, 0)) || IMX_ANDROID_14)
+#if ((CFG80211_VERSION_CODE >= KERNEL_VERSION(6, 0, 0)) ||                     \
+     (defined(ANDROID_SDK_VERSION) && ANDROID_SDK_VERSION >= 34))
 	if (params->link_sta_params.he_capa_len) {
 		ext_tlv = (MrvlExtIEtypes_Data_t *)pos;
 		ext_tlv->header.type = EXTENSION;

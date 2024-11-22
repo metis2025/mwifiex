@@ -1046,6 +1046,7 @@ mlan_status wlan_cmd_802_11_associate(mlan_private *pmpriv,
 	t_u32 rates_size;
 	t_u16 tmp_cap;
 	t_u8 *pos;
+	IEEEtypes_CapInfo_t *pcap_info;
 	t_u8 ft_akm = 0;
 	t_u8 oper_class;
 	t_u8 oper_class_flag = MFALSE;
@@ -1523,6 +1524,11 @@ mlan_status wlan_cmd_802_11_associate(mlan_private *pmpriv,
 	/* Set the Capability info at last */
 	memcpy_ext(pmadapter, &tmp_cap, &pbss_desc->cap_info,
 		   sizeof(passo->cap_info), sizeof(tmp_cap));
+
+	/* retain spectrum_mgmt capability */
+	pcap_info = &passo->cap_info;
+	if (pcap_info->spectrum_mgmt)
+		SPECTRUM_MGMT_ENABLED(tmp_cap);
 
 	if (pmpriv->config_bands == BAND_B)
 		SHORT_SLOT_TIME_DISABLED(tmp_cap);

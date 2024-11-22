@@ -25,8 +25,6 @@ endif
 LD ?=		$(CROSS_COMPILE)ld
 BACKUP=		/root/backup
 YMD=		`date +%Y%m%d%H%M`
-PWD := $(shell dirname $(realpath $(lastword $(MAKEFILE_LIST))))
-M ?= $(shell pwd)
 
 #############################################################################
 # Configuration Options
@@ -52,12 +50,13 @@ CONFIG_PCIE9097=n
 CONFIG_SD9098=y
 CONFIG_USB9098=n
 CONFIG_PCIE9098=y
+CONFIG_SDIW610=n
+CONFIG_USBIW610=n
 CONFIG_SDIW624=n
 CONFIG_SDAW693=n
 CONFIG_PCIEIW624=n
 CONFIG_USBIW624=n
 CONFIG_PCIEAW693=n
-
 
 
 # Debug Option
@@ -113,16 +112,43 @@ CONFIG_TASKLET_SUPPORT=n
 #32bit app over 64bit kernel support
 CONFIG_USERSPACE_32BIT_OVER_KERNEL_64BIT=n
 
+# add -Wno-packed-bitfield-compat when GCC version greater than 4.4
+#GCC_VERSION := $(shell echo `gcc -dumpversion | cut -f1-2 -d.` \>= 4.4 | sed -e 's/\./*100+/g' | bc )
+#ifeq ($(GCC_VERSION),1)
+#ccflags-y += -Wno-packed-bitfield-compat
+#endif
+#ifeq ($(shell test $(WimpGCC_VERSION) -ge 7; echo $$?),0)
+#ccflags-y += -Wimplicit-fallthrough=3
+#endif
+#ccflags-y += -Wunused-but-set-variable
+#ccflags-y += -Wmissing-prototypes
+#ccflags-y += -Wold-style-definition
+#ccflags-y += -Wtype-limits
+#ccflags-y += -Wsuggest-attribute=format
+#ccflags-y += -Wmissing-include-dirs
+#ccflags-y += -Wshadow
+#ccflags-y += -Wsign-compare
+#ccflags-y += -Wunused-macros
+#ccflags-y += -Wmissing-field-initializers
+#ccflags-y += -Wstringop-truncation
+#ccflags-y += -Wmisleading-indentation
+#ccflags-y += -Wunused-const-variable
 
 #############################################################################
 # Select Platform Tools
 #############################################################################
 
+ifeq ($(ANDROID_BUILD), 1)
+    KERNEL_CFLAGS += -DANDROID
+    PWD := $(shell pwd)
+    KERNELDIR ?= $(KERNEL_SRC)
+    ccflags-y += -DANDROID_SDK_VERSION=$(ANDROID_SDK_VERSION)
+endif
+
 MODEXT = ko
-ccflags-y += -I$(M)/mlan
+ccflags-y += -I$(PWD)/mlan
 ccflags-y += -DLINUX
 
-KERNELDIR ?= $(KERNEL_SRC)
 
 
 
@@ -136,18 +162,12 @@ ifneq ($(ANDROID_PRODUCT_OUT),)
 ccflags-y += -DIMX_ANDROID
 ccflags-y += -Wno-implicit-fallthrough
 CONFIG_ANDROID_KERNEL=y
-#Automatically determine Android version from build information to streamline BSP code handling.
-ifeq ($(ANDROID_PRODUCT_OUT),1)
-ccflags-y += -DANDROID_SDK_VERSION=$(ANDROID_SDK_VERSION)
-else
-ccflags-y += -DANDROID_SDK_VERSION=34
-endif
 endif
 endif
 
 LD += -S
 
-BINDIR = ../bin_mxm_wifiex
+BINDIR = ../bin_wlan
 APPDIR= $(shell if test -d "mapp"; then echo mapp; fi)
 
 #############################################################################
@@ -155,7 +175,7 @@ APPDIR= $(shell if test -d "mapp"; then echo mapp; fi)
 #############################################################################
 
 	ccflags-y += -I$(KERNELDIR)/include
-	ccflags-y += -DMLAN_RELEASE_VERSION='"505.p4"'
+	ccflags-y += -DMLAN_RELEASE_VERSION='"505.p7"'
 
 	ccflags-y += -DFPNUM='"92"'
 
@@ -373,28 +393,6 @@ ifeq ($(CONFIG_MAC80211_SUPPORT_MESH),y)
 	ccflags-y += -DMAC80211_SUPPORT_MESH
 endif
 
-# add -Wno-packed-bitfield-compat when GCC version greater than 4.4
-#GCC_VERSION := $(shell echo `gcc -dumpversion | cut -f1-2 -d.` \>= 4.4 | sed -e 's/\./*100+/g' | bc )
-#ifeq ($(GCC_VERSION),1)
-#ccflags-y += -Wno-packed-bitfield-compat
-#endif
-
-#ifeq ($(shell test $(WimpGCC_VERSION) -ge 7; echo $$?),0)
-#ccflags-y += -Wimplicit-fallthrough=3
-#endif
-#ccflags-y += -Wunused-but-set-variable
-#ccflags-y += -Wmissing-prototypes
-#ccflags-y += -Wold-style-definition
-#ccflags-y += -Wtype-limits
-#ccflags-y += -Wsuggest-attribute=format
-#ccflags-y += -Wmissing-include-dirs
-#ccflags-y += -Wshadow
-#ccflags-y += -Wsign-compare
-#ccflags-y += -Wunused-macros
-#ccflags-y += -Wmissing-field-initializers
-#ccflags-y += -Wstringop-truncation
-#ccflags-y += -Wmisleading-indentation
-#ccflags-y += -Wunused-const-variable
 #############################################################################
 # Make Targets
 #############################################################################
@@ -614,10 +612,8 @@ moal-objs := $(MOALOBJS)
 else
 
 default:
-	$(MAKE) -C $(KERNELDIR) M=$(M) ARCH=$(ARCH) CROSS_COMPILE=$(CROSS_COMPILE) modules
+	$(MAKE) -C $(KERNELDIR) M=$(PWD) ARCH=$(ARCH) CROSS_COMPILE=$(CROSS_COMPILE) modules
 
-modules_install:
-	$(MAKE) -C $(KERNELDIR) M=$(M) ARCH=$(ARCH) CROSS_COMPILE=$(CROSS_COMPILE) modules_install
 endif
 
 ###############################################################
@@ -639,9 +635,9 @@ appsbuild:
 	fi
 
 	cp -f README $(BINDIR)
-	cp -rf mapp/mlanconfig/config $(BINDIR)
 
 ifneq ($(APPDIR),)
+	cp -rf mapp/mlanconfig/config $(BINDIR)
 	$(MAKE) -C mapp/mlanutl $@ INSTALLDIR=$(BINDIR)
 endif
 
@@ -658,9 +654,9 @@ build:		echo default
 	cp -rpf script/unload $(BINDIR)/
 
 	cp -f README $(BINDIR)
-	cp -rf mapp/mlanconfig/config $(BINDIR)
 
 ifneq ($(APPDIR),)
+	cp -rf mapp/mlanconfig/config $(BINDIR)
 	$(MAKE) -C mapp/mlanutl $@ INSTALLDIR=$(BINDIR)
 endif
 

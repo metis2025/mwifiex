@@ -2549,8 +2549,10 @@ static void woal_pcie_dump_fw_info(moal_handle *phandle)
 	moal_private *priv = NULL;
 #ifdef DUMP_TO_PROC
 	if (phandle->fw_dump_buf) {
-		PRINTM(MERROR, "FW dump already exist\n");
-		return;
+		PRINTM(MMSG, "FW dump already exist, free existing dump\n");
+		moal_vfree(phandle, phandle->fw_dump_buf);
+		phandle->fw_dump_buf = NULL;
+		phandle->fw_dump_len = 0;
 	}
 #endif
 	mlan_pm_wakeup_card(phandle->pmlan_adapter, MTRUE);

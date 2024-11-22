@@ -1674,10 +1674,13 @@ typedef MLAN_PACK_START struct _RxPD {
 	t_u32 rx_info;
 
 	/** Reserved */
-	t_u8 reserved3[8];
+	t_u8 reserved3[7];
+	t_u8 rx_pkt_flags;
 	t_u8 ta_mac[6];
 	t_u8 reserved4[2];
 } MLAN_PACK_END RxPD, *PRxPD;
+
+#define RX_PKT_FLAG_MEF_MATCH_PKT MBIT(0)
 
 /** IEEEtypes_FrameCtl_t*/
 #ifdef BIG_ENDIAN_SUPPORT
@@ -3686,6 +3689,7 @@ typedef enum _SNMP_MIB_INDEX {
 	StopDeauth_i = 44,
 	Dot11H_fakeRadar = 45,
 	ChanTrackParam_i = 46,
+	Dot11h_disable_tpc_i = 47,
 } SNMP_MIB_INDEX;
 
 /** max SNMP buf size */

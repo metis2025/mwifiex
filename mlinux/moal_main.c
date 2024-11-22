@@ -174,6 +174,7 @@ static struct _card_info card_info_SD8887 = {
 	.fw_reset_val = 1,
 	.fw_wakeup_reg = 0,
 	.fw_wakeup_val = 2,
+	.fw_winner_status_reg = 0x90,
 	.slew_rate_reg = 0x80002328,
 	.slew_rate_bit_offset = 12,
 #endif
@@ -214,6 +215,7 @@ static struct _card_info card_info_SD8897 = {
 	.fw_reset_val = 1,
 	.fw_wakeup_reg = 0,
 	.fw_wakeup_val = 2,
+	.fw_winner_status_reg = 0xC0,
 	.slew_rate_reg = 0x80002328,
 	.slew_rate_bit_offset = 12,
 #endif
@@ -299,6 +301,7 @@ static struct _card_info card_info_SD8977 = {
 	.fw_reset_val = 0x99,
 	.fw_wakeup_reg = 0,
 	.fw_wakeup_val = 2,
+	.fw_winner_status_reg = 0xFC,
 	.slew_rate_reg = 0x80002328,
 	.slew_rate_bit_offset = 12,
 #endif
@@ -342,6 +345,7 @@ static struct _card_info card_info_SD8978 = {
 	.fw_reset_val = 0x99,
 	.fw_wakeup_reg = 0,
 	.fw_wakeup_val = 2,
+	.fw_winner_status_reg = 0xFC,
 	.slew_rate_reg = 0x80002328,
 	.slew_rate_bit_offset = 12,
 #endif
@@ -385,6 +389,7 @@ static struct _card_info card_info_SD8997 = {
 	.fw_reset_val = 0x99,
 	.fw_wakeup_reg = 0,
 	.fw_wakeup_val = 2,
+	.fw_winner_status_reg = 0xFC,
 	.slew_rate_reg = 0x80002328,
 	.slew_rate_bit_offset = 12,
 #endif
@@ -429,6 +434,7 @@ static struct _card_info card_info_SD9098 = {
 	.fw_reset_val = 0x99,
 	.fw_wakeup_reg = 0,
 	.fw_wakeup_val = 2,
+	.fw_winner_status_reg = 0xFC,
 	.slew_rate_reg = 0x90002328,
 	.slew_rate_bit_offset = 12,
 #endif
@@ -473,6 +479,7 @@ static struct _card_info card_info_SD9097 = {
 	.fw_reset_val = 0x99,
 	.fw_wakeup_reg = 0,
 	.fw_wakeup_val = 2,
+	.fw_winner_status_reg = 0xFC,
 	.slew_rate_reg = 0x90002328,
 	.slew_rate_bit_offset = 12,
 #endif
@@ -517,6 +524,7 @@ static struct _card_info card_info_SDIW624 = {
 	.fw_reset_val = 0x99,
 	.fw_wakeup_reg = 0,
 	.fw_wakeup_val = 2,
+	.fw_winner_status_reg = 0xFC,
 	.slew_rate_reg = 0x90002328,
 	.slew_rate_bit_offset = 12,
 #endif
@@ -561,6 +569,7 @@ static struct _card_info card_info_SDAW693 = {
 	.fw_reset_val = 0x99,
 	.fw_wakeup_reg = 0,
 	.fw_wakeup_val = 2,
+	.fw_winner_status_reg = 0xFC,
 	.slew_rate_reg = 0x90002328,
 	.slew_rate_bit_offset = 12,
 #endif
@@ -605,6 +614,7 @@ static struct _card_info card_info_SD9177 = {
 	.fw_reset_val = 0x99,
 	.fw_wakeup_reg = 0,
 	.fw_wakeup_val = 2,
+	.fw_winner_status_reg = 0xFC,
 	.slew_rate_reg = 0x90002328,
 	.slew_rate_bit_offset = 12,
 #endif
@@ -649,6 +659,7 @@ static struct _card_info card_info_SDIW610 = {
 	.fw_reset_val = 0x99,
 	.fw_wakeup_reg = 0,
 	.fw_wakeup_val = 2,
+	.fw_winner_status_reg = 0xFC,
 	.slew_rate_reg = 0x45001064,
 	.slew_rate_bit_offset = 16,
 #endif
@@ -976,6 +987,7 @@ static struct _card_info card_info_SD8987 = {
 	.fw_reset_val = 0x99,
 	.fw_wakeup_reg = 0,
 	.fw_wakeup_val = 2,
+	.fw_winner_status_reg = 0xFC,
 	.slew_rate_reg = 0x80002328,
 	.slew_rate_bit_offset = 12,
 #endif
@@ -1255,8 +1267,8 @@ void woal_clean_up(moal_handle *handle)
 #ifdef STA_CFG80211
 #if CFG80211_VERSION_CODE >= KERNEL_VERSION(3, 11, 0)
 			if (IS_STA_CFG80211(cfg80211_wext) && priv->wdev &&
-#if ((CFG80211_VERSION_CODE >= KERNEL_VERSION(5, 19, 2)) || IMX_ANDROID_13 ||  \
-     IMX_ANDROID_12_BACKPORT)
+#if ((CFG80211_VERSION_CODE >= KERNEL_VERSION(5, 19, 2)) ||                    \
+     (defined(ANDROID_SDK_VERSION) && ANDROID_SDK_VERSION >= 31))
 			    priv->wdev->connected) {
 #else
 			    priv->wdev->current_bss) {
@@ -1299,6 +1311,92 @@ void woal_clean_up(moal_handle *handle)
 	}
 	woal_flush_evt_queue(handle);
 	return;
+}
+
+/**
+ *  @brief This function send the auto recovery failure event to userspace using
+ * netlink
+ *
+ *  @param handle       Pointer to structure moal_handle
+ *
+ *  @return        N/A
+ */
+void woal_send_auto_recovery_failure_event(moal_handle *handle)
+{
+	mlan_status ret = MLAN_STATUS_SUCCESS;
+	struct sk_buff *skb = NULL;
+	struct nlmsghdr *nlh = NULL;
+	struct sock *sk = handle->nl_sk;
+	int len = strlen(CUS_EVT_FW_RECOVER_FAIL);
+	ENTER();
+
+	/* interface name to be prepended to event */
+	/* NL_MAX_PAYLOAD = 3 * 1024 */
+	if ((len + IFNAMSIZ) > NL_MAX_PAYLOAD) {
+		PRINTM(MERROR, "event size is too big, len=%d\n", (int)len);
+		ret = MLAN_STATUS_FAILURE;
+		goto done;
+	}
+	if (sk) {
+		/* Allocate skb */
+		skb = alloc_skb(NLMSG_SPACE(NL_MAX_PAYLOAD), GFP_ATOMIC);
+		if (!skb) {
+			PRINTM(MERROR, "Could not allocate skb for netlink\n");
+			ret = MLAN_STATUS_FAILURE;
+			goto done;
+		}
+		memset(skb->data, 0, NLMSG_SPACE(NL_MAX_PAYLOAD));
+
+		nlh = (struct nlmsghdr *)skb->data;
+		nlh->nlmsg_len = NLMSG_SPACE(len + IFNAMSIZ);
+
+		/* From kernel */
+		nlh->nlmsg_pid = 0;
+		nlh->nlmsg_flags = 0;
+
+		/* Data */
+		skb_put(skb, nlh->nlmsg_len);
+		moal_memcpy_ext(handle, NLMSG_DATA(nlh), "wlan", sizeof("wlan"),
+				nlh->nlmsg_len - NLMSG_LENGTH(0));
+
+		moal_memcpy_ext(handle, ((t_u8 *)(NLMSG_DATA(nlh))) + IFNAMSIZ,
+				CUS_EVT_FW_RECOVER_FAIL, len,
+				nlh->nlmsg_len - NLMSG_LENGTH(IFNAMSIZ));
+
+		/* From Kernel */
+#if LINUX_VERSION_CODE < KERNEL_VERSION(3, 7, 0)
+		NETLINK_CB(skb).pid = 0;
+#else
+		NETLINK_CB(skb).portid = 0;
+#endif
+
+#if LINUX_VERSION_CODE < KERNEL_VERSION(2, 6, 20)
+		/* Multicast message */
+		NETLINK_CB(skb).dst_pid = 0;
+#endif
+
+		/* Multicast group number */
+#if LINUX_VERSION_CODE < KERNEL_VERSION(2, 6, 14)
+		NETLINK_CB(skb).dst_groups = NL_MULTICAST_GROUP;
+#else
+		NETLINK_CB(skb).dst_group = NL_MULTICAST_GROUP;
+#endif
+
+		/* Send message */
+		ret = netlink_broadcast(sk, skb, 0, NL_MULTICAST_GROUP,
+					GFP_ATOMIC);
+		if (ret) {
+			PRINTM(MWARN, "netlink_broadcast failed: ret=%d\n",
+			       ret);
+			goto done;
+		}
+
+	} else {
+		PRINTM(MERROR,
+		       "Could not send event through NETLINK. Link down.\n");
+	}
+done:
+	LEAVE();
 }
 
 /**
@@ -1408,8 +1506,8 @@ static void woal_hang_work_queue(struct work_struct *work)
 #ifdef STA_CFG80211
 #if CFG80211_VERSION_CODE >= KERNEL_VERSION(3, 11, 0)
 			if (IS_STA_CFG80211(cfg80211_wext) && priv->wdev &&
-#if ((CFG80211_VERSION_CODE >= KERNEL_VERSION(5, 19, 2)) || IMX_ANDROID_13 ||  \
-     IMX_ANDROID_12_BACKPORT)
+#if ((CFG80211_VERSION_CODE >= KERNEL_VERSION(5, 19, 2)) ||                    \
+     (defined(ANDROID_SDK_VERSION) && ANDROID_SDK_VERSION >= 31))
 			    priv->wdev->connected) {
 #else
 			    priv->wdev->current_bss) {
@@ -2599,6 +2697,7 @@ mlan_status woal_init_sw(moal_handle *handle)
 	handle->rtt_capa.responder_supported = MTRUE;
 	handle->rtt_capa.mc_version = 60;
 	handle->is_edmac_enabled = MFALSE;
+	handle->driver_init = MFALSE;
 
 	/* Register to MLAN */
 	memset(&device, 0, sizeof(mlan_device));
@@ -2712,6 +2811,7 @@ mlan_status woal_init_sw(moal_handle *handle)
 	device.dmcs = handle->params.dmcs;
 	device.pref_dbc = handle->params.pref_dbc;
 	device.reject_addba_req = handle->params.reject_addba_req;
+	device.disable_11h_tpc = (t_u32)handle->params.disable_11h_tpc;
 
 	for (i = 0; i < handle->drv_mode.intf_num; i++) {
 		device.bss_attr[i].bss_type =
@@ -4270,6 +4370,15 @@ err:
 #ifdef CONFIG_PROC_FS
 		woal_proc_exit(handle);
 #endif
+
+#if defined(STA_CFG80211) || defined(UAP_CFG80211)
+		if (handle->wiphy) {
+			wiphy_unregister(handle->wiphy);
+			woal_cfg80211_free_bands(handle->wiphy);
+			wiphy_free(handle->wiphy);
+			handle->wiphy = NULL;
+		}
+#endif
 	}
 	LEAVE();
 	return ret;
@@ -4766,6 +4875,7 @@ static mlan_status woal_request_fw_dpc(moal_handle *handle,
 	if (ret)
 		goto done;
 
+	handle->driver_init = MTRUE;
 done:
 	/* We should hold the semaphore until callback finishes execution */
 	MOAL_REL_SEMAPHORE(&AddRemoveCardSem);
@@ -4906,6 +5016,9 @@ mlan_status woal_init_fw(moal_handle *handle)
 			ret = woal_add_card_dpc(handle);
 			if (ret)
 				goto done;
+
+			handle->driver_init = MTRUE;
+
 			/* Release semaphore if download is not required */
 			MOAL_REL_SEMAPHORE(&AddRemoveCardSem);
 		done:
@@ -6649,8 +6762,8 @@ int woal_close(struct net_device *dev)
 	woal_cancel_scan(priv, MOAL_IOCTL_WAIT);
 
 #if CFG80211_VERSION_CODE >= KERNEL_VERSION(3, 11, 0)
-#if ((CFG80211_VERSION_CODE >= KERNEL_VERSION(5, 19, 2)) || IMX_ANDROID_13 ||  \
-     IMX_ANDROID_12_BACKPORT)
+#if ((CFG80211_VERSION_CODE >= KERNEL_VERSION(5, 19, 2)) ||                    \
+     (defined(ANDROID_SDK_VERSION) && ANDROID_SDK_VERSION >= 31))
 	if (IS_STA_CFG80211(cfg80211_wext) && priv->wdev &&
 	    priv->wdev->connected) {
 #else
@@ -10387,8 +10500,8 @@ t_void woal_send_disconnect_to_system(moal_private *priv,
 	if (IS_STA_CFG80211(cfg80211_wext)) {
 		spin_lock_irqsave(&priv->connect_lock, flags);
 		if (!priv->cfg_disconnect && !priv->cfg_connect && priv->wdev &&
-#if ((CFG80211_VERSION_CODE >= KERNEL_VERSION(5, 19, 2)) || IMX_ANDROID_13 ||  \
-     IMX_ANDROID_12_BACKPORT)
+#if ((CFG80211_VERSION_CODE >= KERNEL_VERSION(5, 19, 2)) ||                    \
+     (defined(ANDROID_SDK_VERSION) && ANDROID_SDK_VERSION >= 31))
 		    priv->wdev->connected) {
 #else
 		    priv->wdev->current_bss) {
@@ -12218,7 +12331,9 @@ t_void woal_scan_timeout_handler(struct work_struct *work)
 				woal_inform_bss_from_scan_result(priv, NULL,
 								 MOAL_NO_WAIT);
 			spin_lock_irqsave(&handle->scan_req_lock, flags);
-			woal_cfg80211_scan_done(handle->scan_request, MFALSE);
+			if (handle->scan_request)
+				woal_cfg80211_scan_done(handle->scan_request,
+							MFALSE);
 			handle->scan_request = NULL;
 			handle->fake_scan_complete = MFALSE;
 			spin_unlock_irqrestore(&handle->scan_req_lock, flags);
@@ -14031,6 +14146,13 @@ int woal_request_fw_reload(moal_handle *phandle, t_u8 mode)
 	moal_handle *ref_handle = NULL;
 
 	ENTER();
+
+	if (!handle->driver_init) {
+		PRINTM(MMSG, "Ignore fw reload, driver not initialized\n");
+		LEAVE();
+		return -EFAULT;
+	}
+
 	wifi_status = WIFI_STATUS_FW_RELOAD;
 #ifdef PCIE
 	if (mode == FW_RELOAD_PCIE_RESET) {

@@ -3957,8 +3957,8 @@ mlan_status moal_recv_event(t_void *pmoal, pmlan_event pmevent)
 			    || priv->uap_host_based
 #endif
 #ifdef STA_CFG80211
-#if ((CFG80211_VERSION_CODE >= KERNEL_VERSION(5, 19, 2)) || IMX_ANDROID_13 ||  \
-     IMX_ANDROID_12_BACKPORT)
+#if ((CFG80211_VERSION_CODE >= KERNEL_VERSION(5, 19, 2)) ||                    \
+     (defined(ANDROID_SDK_VERSION) && ANDROID_SDK_VERSION >= 31))
 			    || priv->wdev->connected
 #else
 			    || priv->wdev->current_bss
@@ -4109,12 +4109,12 @@ mlan_status moal_recv_event(t_void *pmoal, pmlan_event pmevent)
 			cfg80211_ch_switch_notify(priv->netdev, &priv->chan, 0,
 						  0);
 #elif ((CFG80211_VERSION_CODE >= KERNEL_VERSION(6, 1, 0) &&                    \
-	IMX_ANDROID_13)) &&                                                    \
+	(defined(ANDROID_SDK_VERSION) && ANDROID_SDK_VERSION >= 33))) &&       \
 	CFG80211_VERSION_CODE < KERNEL_VERSION(6, 9, 0)
 			cfg80211_ch_switch_notify(priv->netdev, &priv->chan, 0,
 						  0);
 #elif ((CFG80211_VERSION_CODE >= KERNEL_VERSION(5, 19, 2)) ||                  \
-       IMX_ANDROID_13 || IMX_ANDROID_12_BACKPORT)
+       (defined(ANDROID_SDK_VERSION) && ANDROID_SDK_VERSION >= 31))
 			cfg80211_ch_switch_notify(priv->netdev, &priv->chan, 0);
 #else
 			cfg80211_ch_switch_notify(priv->netdev, &priv->chan);
@@ -4463,8 +4463,8 @@ mlan_status moal_recv_event(t_void *pmoal, pmlan_event pmevent)
 						PRINTM(MEVENT,
 						       "HostMlme %s: Receive deauth/disassociate\n",
 						       priv->netdev->name);
-#if ((CFG80211_VERSION_CODE >= KERNEL_VERSION(5, 19, 2)) || IMX_ANDROID_13 ||  \
-     IMX_ANDROID_12_BACKPORT)
+#if ((CFG80211_VERSION_CODE >= KERNEL_VERSION(5, 19, 2)) ||                    \
+     (defined(ANDROID_SDK_VERSION) && ANDROID_SDK_VERSION >= 31))
 						if (!priv->wdev->connected) {
 #else
 						if (!priv->wdev->current_bss) {
@@ -4896,8 +4896,8 @@ mlan_status moal_recv_event(t_void *pmoal, pmlan_event pmevent)
 		roam_info =
 			kzalloc(sizeof(struct cfg80211_roam_info), GFP_ATOMIC);
 		if (roam_info) {
-#if ((CFG80211_VERSION_CODE >= KERNEL_VERSION(6, 0, 0)) || IMX_ANDROID_13 ||   \
-     IMX_ANDROID_12_BACKPORT)
+#if ((CFG80211_VERSION_CODE >= KERNEL_VERSION(6, 0, 0)) ||                     \
+     (defined(ANDROID_SDK_VERSION) && ANDROID_SDK_VERSION >= 31))
 			roam_info->links[0].bssid = priv->cfg_bssid;
 #else
 			roam_info->bssid = priv->cfg_bssid;

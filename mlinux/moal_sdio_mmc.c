@@ -283,7 +283,7 @@ static void woal_sdio_interrupt(struct sdio_func *func)
 	moal_handle *handle;
 	sdio_mmc_card *card;
 	mlan_status status;
-
+	t_u32 host_int_status_reg_val;
 	ENTER();
 
 	card = sdio_get_drvdata(func);
@@ -303,6 +303,14 @@ static void woal_sdio_interrupt(struct sdio_func *func)
 	PRINTM(MINFO, "*** IN SDIO IRQ ***\n");
 	PRINTM(MINTR, "*\n");
 
+	if (handle->fw_reseting == MTRUE && (!handle->pmlan_adapter)) {
+		handle->ops.read_reg(handle, 0x0c, &host_int_status_reg_val);
+		PRINTM(MERROR,
+		       "*** Recv intr during fw reset, host int status reg value is %d, ignore it ***\n",
+		       host_int_status_reg_val);
+		LEAVE();
+		return;
+	}
 	/* call mlan_interrupt to read int status */
 	status = mlan_interrupt(0, handle->pmlan_adapter);
 	if (status == MLAN_STATUS_FAILURE) {
@@ -3094,8 +3102,10 @@ static void woal_sdiommc_dump_fw_info(moal_handle *phandle)
 	}
 #ifdef DUMP_TO_PROC
 	if (phandle->fw_dump_buf) {
-		PRINTM(MERROR, "FW dump already exist\n");
-		return;
+		PRINTM(MMSG, "FW dump already exist, free existing dump\n");
+		moal_vfree(phandle, phandle->fw_dump_buf);
+		phandle->fw_dump_buf = NULL;
+		phandle->fw_dump_len = 0;
 	}
 #endif
 	/** cancel all pending commands */
@@ -3301,6 +3311,30 @@ void woal_sdio_reset_hw(moal_handle *handle)
 }
 
 /**
+ *  @brief This function check fw winner status
+ *
+ *  @param handle   A pointer to moal_handle structure
+ *
+ *  @return        1--success, otherwise failure
+ */
+static BOOLEAN woal_sdiommc_check_winner_status(moal_handle *handle)
+{
+	t_u32 value = 1;
+	t_u32 winner_status_reg = handle->card_info->fw_winner_status_reg;
+
+	ENTER();
+#ifdef SD8801
+	if (IS_SD8801(handle->card_type)) {
+		LEAVE();
+		return MTRUE;
+	}
+#endif
+	handle->ops.read_reg(handle, winner_status_reg, &value);
+	LEAVE();
+	return (value == 0);
+}
+
+/**
  *  @brief This function reload fw
  *
  *  @param handle   A pointer to moal_handle structure
@@ -3365,6 +3399,13 @@ static int woal_sdiommc_reset_fw(moal_handle *handle)
 		       reset_reg, value);
 		ret = -EFAULT;
 		goto done;
+	} else {
+		for (tries = 0; tries < 1000; ++tries) {
+			if (woal_sdiommc_check_winner_status(handle)) {
+				break;
+			}
+			udelay(1000);
+		}
 	}
 	PRINTM(MMSG, "SDIO Trigger FW In-band Reset success");
 done:
@@ -3610,13 +3651,19 @@ static void woal_sdiommc_work(struct work_struct *work)
 	}
 	if (woal_sdiommc_reset_fw(handle)) {
 		PRINTM(MERROR, "SDIO In-band Reset Fail\n");
-		goto done;
+		woal_send_auto_recovery_failure_event(handle);
+		wifi_status = WIFI_STATUS_FW_RECOVERY_FAIL;
+		return;
 	}
+
 	handle->surprise_removed = MFALSE;
 	if (MLAN_STATUS_SUCCESS == woal_do_sdiommc_flr(handle, false, true))
 		handle->fw_reseting = MFALSE;
-	else
+	else {
 		handle = NULL;
+		wifi_status = WIFI_STATUS_FW_RECOVERY_FAIL;
+		return;
+	}
 
 	if (ref_handle) {
 		ref_handle->surprise_removed = MFALSE;
@@ -3625,7 +3672,6 @@ static void woal_sdiommc_work(struct work_struct *work)
 			ref_handle->fw_reseting = MFALSE;
 	}
 	card->work_flags = MFALSE;
-done:
 	wifi_status = WIFI_STATUS_OK;
 	if (handle)
 		woal_send_auto_recovery_complete_event(handle);
