@@ -242,6 +242,18 @@ static mlan_status wlan_cmd_802_11_snmp_mib(pmlan_private pmpriv,
 			cmd->size += sizeof(t_u16);
 		}
 		break;
+	case Dot11h_disable_tpc_i:
+		psnmp_mib->oid = wlan_cpu_to_le16((t_u16)Dot11h_disable_tpc_i);
+		if (cmd_action == HostCmd_ACT_GEN_SET) {
+			psnmp_mib->query_type =
+				wlan_cpu_to_le16(HostCmd_ACT_GEN_SET);
+			psnmp_mib->buf_size = wlan_cpu_to_le16(sizeof(t_u16));
+			ul_temp = *(t_u32 *)pdata_buf;
+			*((t_u16 *)(psnmp_mib->value)) =
+				wlan_cpu_to_le16((t_u16)ul_temp);
+			cmd->size += sizeof(t_u16);
+		}
+		break;
 	case WwsMode_i:
 		psnmp_mib->oid = wlan_cpu_to_le16((t_u16)WwsMode_i);
 		if (cmd_action == HostCmd_ACT_GEN_SET) {

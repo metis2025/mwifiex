@@ -947,7 +947,7 @@ static int woal_config_read(struct seq_file *sfp, void *data)
 			for (i = 3; i < 13; i++)
 				seq_printf(sfp, " %u",
 					   handle->rf_data->tx_frame_data[i]);
-			for (i = 13; i < 20; i++)
+			for (i = 13; i < 21; i++)
 				seq_printf(sfp, " %d",
 					   handle->rf_data->tx_frame_data[i]);
 			seq_printf(sfp, " %02x:%02x:%02x:%02x:%02x:%02x",

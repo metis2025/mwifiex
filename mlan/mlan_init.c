@@ -1786,7 +1786,7 @@ done:
  */
 t_void wlan_free_adapter(pmlan_adapter pmadapter)
 {
-	mlan_callbacks *pcb = (mlan_callbacks *)&pmadapter->callbacks;
+	mlan_callbacks *pcb;
 #if defined(USB)
 	t_s32 i = 0;
 #endif
@@ -1798,6 +1798,7 @@ t_void wlan_free_adapter(pmlan_adapter pmadapter)
 		return;
 	}
 
+	pcb = (mlan_callbacks *)&pmadapter->callbacks;
 #ifdef PCIE
 	if (IS_PCIE(pmadapter->card_type)) {
 		/* Free ssu dma buffer just in case  */

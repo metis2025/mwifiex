@@ -3024,6 +3024,7 @@ static mlan_status wlan_uap_cmd_snmp_mib(pmlan_private pmpriv,
 		switch (cmd_oid) {
 		case Dot11D_i:
 		case Dot11H_i:
+		case Dot11h_disable_tpc_i:
 			psnmp_mib->oid = wlan_cpu_to_le16((t_u16)cmd_oid);
 			psnmp_mib->buf_size = wlan_cpu_to_le16(sizeof(t_u16));
 			ul_temp = *(t_u32 *)pdata_buf;

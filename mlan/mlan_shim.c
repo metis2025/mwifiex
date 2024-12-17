@@ -474,6 +474,7 @@ mlan_status mlan_register(pmlan_device pmdevice, t_void **ppmlan_adapter)
 #endif
 	pmadapter->init_para.dfs53cfg = pmdevice->dfs53cfg;
 	pmadapter->init_para.dfs_offload = pmdevice->dfs_offload;
+	pmadapter->init_para.disable_11h_tpc = pmdevice->disable_11h_tpc;
 	pmadapter->priv_num = 0;
 	pmadapter->priv[0] = MNULL;
 
@@ -1123,6 +1124,8 @@ rx_process_start:
 		pmadapter->ops.handle_rx_packet(pmadapter, pmbuf);
 		if (limit && rx_num >= limit)
 			break;
+		if (pmadapter->rx_lock_flag)
+			break;
 	}
 	if (rx_pkts)
 		*rx_pkts = rx_num;
@@ -1228,6 +1231,16 @@ process_start:
 		if ((pmadapter->ps_state == PS_STATE_SLEEP) &&
 		    pmadapter->pm_wakeup_flag) {
 			pmadapter->pm_wakeup_flag = MFALSE;
+#ifdef SDIO
+			if (IS_SD(pmadapter->card_type)) {
+				if (pmadapter->pm_wakeup_timeout == 1) {
+					if (!pmadapter->ops
+						     .wakeup_timeout_recovery(
+							     pmadapter))
+						continue;
+				}
+			}
+#endif
 			if (pmadapter->pm_wakeup_timeout > 2)
 				wlan_recv_event(
 					wlan_get_priv(pmadapter,

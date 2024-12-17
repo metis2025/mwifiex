@@ -814,10 +814,10 @@ static int woal_pcie_suspend(struct pci_dev *pdev, pm_message_t state)
 	}
 	woal_flush_workqueue(handle);
 	if (!keep_power) {
+		handle->surprise_removed = MTRUE;
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(3, 18, 0)
 		woal_do_flr(handle, true, false);
 #endif
-		handle->surprise_removed = MTRUE;
 		handle->is_suspended = MTRUE;
 	}
 #ifdef IMX_SUPPORT
@@ -2547,8 +2547,10 @@ static void woal_pcie_dump_fw_info(moal_handle *phandle)
 	moal_private *priv = NULL;
 #ifdef DUMP_TO_PROC
 	if (phandle->fw_dump_buf) {
-		PRINTM(MERROR, "FW dump already exist\n");
-		return;
+		PRINTM(MMSG, "FW dump already exist, free existing dump\n");
+		moal_vfree(phandle, phandle->fw_dump_buf);
+		phandle->fw_dump_buf = NULL;
+		phandle->fw_dump_len = 0;
 	}
 #endif
 	mlan_pm_wakeup_card(phandle->pmlan_adapter, MTRUE);

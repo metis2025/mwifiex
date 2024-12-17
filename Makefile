@@ -112,7 +112,6 @@ CONFIG_TASKLET_SUPPORT=n
 #32bit app over 64bit kernel support
 CONFIG_USERSPACE_32BIT_OVER_KERNEL_64BIT=n
 
-
 GCC_VERSION := $(shell echo `gcc -dumpversion | cut -f1-2 -d.` \>= 4.4 | sed -e 's/\./*100+/g' | bc )
 ifeq ($(GCC_VERSION),1)
         ccflags-y += -Wno-packed-bitfield-compat
@@ -139,6 +138,13 @@ endif
 # Select Platform Tools
 #############################################################################
 
+ifeq ($(ANDROID_BUILD), 1)
+    KERNEL_CFLAGS += -DANDROID
+    PWD := $(shell pwd)
+    KERNELDIR ?= $(KERNEL_SRC)
+    ccflags-y += -DANDROID_SDK_VERSION=$(ANDROID_SDK_VERSION)
+endif
+
 MODEXT = ko
 ccflags-y += -I$(PWD)/mlan
 ccflags-y += -DLINUX
@@ -156,25 +162,6 @@ ifneq ($(ANDROID_PRODUCT_OUT),)
 ccflags-y += -DIMX_ANDROID
 ccflags-y += -Wno-implicit-fallthrough
 CONFIG_ANDROID_KERNEL=y
-#Automatically determine Android version from build information to streamline BSP code handling.
-ifeq ($(ANDROID_PRODUCT_OUT),1)
-ccflags-y += -DANDROID_SDK_VERSION=$(ANDROID_SDK_VERSION)
-else
-include $(ANDROID_BUILD_TOP)/build/make/core/build_id.mk
-ifeq ($(shell echo "$(BUILD_ID)" | cut -c1),R)
-      ccflags-y += -DANDROID_SDK_VERSION=30
-else ifeq ($(shell echo "$(BUILD_ID)" | cut -c1),S)
-      ccflags-y += -DANDROID_SDK_VERSION=31
-else ifeq ($(shell echo "$(BUILD_ID)" | cut -c1),T)
-      ccflags-y += -DANDROID_SDK_VERSION=33
-else ifeq ($(shell echo "$(BUILD_ID)" | cut -c1),U)
-      ccflags-y += -DANDROID_SDK_VERSION=34
-else
-    # Default optimization or actions
-      ANDROID_SDK_VERSION := 0
-      ccflags-y += -DANDROID_SDK_VERSION
-endif
-endif
 endif
 endif
 
@@ -188,7 +175,7 @@ APPDIR= $(shell if test -d "mapp"; then echo mapp; fi)
 #############################################################################
 
 	ccflags-y += -I$(KERNELDIR)/include
-	ccflags-y += -DMLAN_RELEASE_VERSION='"505.p4"'
+	ccflags-y += -DMLAN_RELEASE_VERSION='"505.p10"'
 
 	ccflags-y += -DFPNUM='"92"'
 

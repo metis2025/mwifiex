@@ -643,6 +643,13 @@ static mlan_status wlan_ret_802_11_snmp_mib(pmlan_private pmpriv,
 				(ul_temp & SLAVE_RADAR_DET_MASK) ? MTRUE :
 								   MFALSE;
 		}
+		/* Update state for 11h tpc disable */
+		if (oid == Dot11h_disable_tpc_i) {
+			/* Set 11h tpc to private */
+			ul_temp = wlan_le16_to_cpu(*((t_u16 *)(psmib->value)));
+			PRINTM(MCMND, "SNMP_RESP: Dot11h_disable_tpc_i =%u\n",
+			       ul_temp);
+		}
 	}
 
 	if (pioctl_buf) {

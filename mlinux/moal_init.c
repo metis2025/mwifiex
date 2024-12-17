@@ -336,6 +336,9 @@ static int mon_filter = DEFAULT_NETMON_FILTER;
 
 int dual_nb;
 
+/** disable 802.11h tpc configuration */
+static int disable_11h_tpc = 0;
+
 #ifdef DEBUG_LEVEL1
 #ifdef DEBUG_LEVEL2
 #define DEFAULT_DEBUG_MASK (0xffffffff)
@@ -562,16 +565,35 @@ static mlan_status parse_line_read_string(t_u8 *line, char **out_str)
 		ret = MLAN_STATUS_FAILURE;
 		goto out;
 	}
+	if ((p - line) >= (MAX_LINE_LEN - 1)) {
+		PRINTM(MERROR,
+		       "err(1):input data size exceeds the dest buff limit\n");
+		ret = MLAN_STATUS_FAILURE;
+		goto out;
+	}
 	p++;
 	pstr = p;
-	while (*pstr) {
-		if (*pstr == '\"')
-			*pstr = '\0';
-		pstr++;
+	if ((pstr - line) >= (MAX_LINE_LEN - 1)) {
+		PRINTM(MERROR,
+		       "err(2):input data size exceeds the dest buff limit\n");
+		ret = MLAN_STATUS_FAILURE;
+		goto out;
+	} else {
+		while (*pstr) {
+			if (*pstr == '\"')
+				*pstr = '\0';
+			pstr++;
+			if ((pstr - line) >= (MAX_LINE_LEN - 1)) {
+				PRINTM(MERROR,
+				       "err(3):input data size exceeds the dest buff limit\n");
+				ret = MLAN_STATUS_FAILURE;
+				goto out;
+			}
+		}
+		if (*p == '\0')
+			p++;
+		*out_str = p;
 	}
-	if (*p == '\0')
-		p++;
-	*out_str = p;
 out:
 	return ret;
 }
@@ -1597,6 +1619,14 @@ static mlan_status parse_cfg_read_block(t_u8 *data, t_u32 size,
 			params->reject_addba_req = out_data;
 			PRINTM(MMSG, "reject_addba_req=%x\n",
 			       params->reject_addba_req);
+		} else if (strncmp(line, "disable_11h_tpc",
+				   strlen("disable_11h_tpc")) == 0) {
+			if (parse_line_read_int(line, &out_data) !=
+			    MLAN_STATUS_SUCCESS)
+				goto err;
+			params->disable_11h_tpc = out_data;
+			PRINTM(MMSG, "disable_11h_tpc=%x\n",
+			       params->disable_11h_tpc);
 		}
 	}
 
@@ -2000,6 +2030,13 @@ static void woal_setup_module_param(moal_handle *handle, moal_mod_para *params)
 	handle->params.dual_nb = dual_nb;
 	if (params)
 		handle->params.dual_nb = params->dual_nb;
+
+	handle->params.disable_11h_tpc = disable_11h_tpc;
+	/* Ignore country IE when 11h tpc is disabled */
+	if (disable_11h_tpc)
+		moal_extflg_set(handle, EXT_COUNTRY_IE_IGNORE);
+	if (params)
+		handle->params.disable_11h_tpc = params->disable_11h_tpc;
 }
 
 /**
@@ -2567,6 +2604,12 @@ void woal_init_from_dev_tree(void)
 				PRINTM(MERROR, "rej_addba_req_cfg=0x%x\n",
 				       data);
 				reject_addba_req = data;
+			}
+		} else if (!strncmp(prop->name, "disable_11h_tpc",
+				    strlen("disable_11h_tpc"))) {
+			if (!of_property_read_u32(dt_node, prop->name, &data)) {
+				PRINTM(MERROR, "disable_11h_tpc=0x%x\n", data);
+				disable_11h_tpc = data;
 			}
 		}
 #if defined(STA_CFG80211) || defined(UAP_CFG80211)
@@ -3187,3 +3230,7 @@ module_param(reject_addba_req, int, 0);
 MODULE_PARM_DESC(
 	reject_addba_req,
 	"Bit1: Reject the addba request when FW auto re-connect enabled (STA BSS only); Bit0: Reject the addba request when HS activated");
+
+module_param(disable_11h_tpc, int, 0);
+MODULE_PARM_DESC(disable_11h_tpc,
+		 "0: Enable 802.11h tpc; 1: Disable 802.11h tpc");

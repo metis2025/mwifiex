@@ -753,6 +753,9 @@ static raListTbl *wlan_wmm_get_highest_priolist_ptr(pmlan_adapter pmadapter,
 							next_prio = i - 1;
 						else
 							next_prio = i + 1;
+						next_prio = (next_prio < 1) ?
+								    0 :
+								    next_prio;
 						next_tid =
 							tos_to_tid[next_prio];
 						if (priv_tmp->wmm.pkts_queued
@@ -1698,6 +1701,7 @@ static INLINE void wlan_send_processed_packet(pmlan_private priv,
 	pmlan_adapter pmadapter = priv->adapter;
 	mlan_status ret = MLAN_STATUS_FAILURE;
 
+	ptrindex = (ptrindex < 1) ? 0 : ptrindex;
 	pmbuf = (pmlan_buffer)util_dequeue_list(pmadapter->pmoal_handle,
 						&ptr->buf_head, MNULL, MNULL);
 	if (pmbuf) {
@@ -4916,6 +4920,10 @@ int wlan_get_ralist_info(mlan_private *priv, ralist_info *buf)
 				memcpy_ext(priv->adapter, plist->ra,
 					   ra_list->ra, MLAN_MAC_ADDR_LENGTH,
 					   MLAN_MAC_ADDR_LENGTH);
+
+				if (((t_u8 *)plist - (t_u8 *)buf) >=
+				    (MLAN_MAX_RALIST_NUM * sizeof(ralist_info)))
+					break;
 				plist++;
 				count++;
 				if (count >= MLAN_MAX_RALIST_NUM)

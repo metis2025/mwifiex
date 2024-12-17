@@ -299,6 +299,10 @@ typedef t_u8 BOOLEAN;
 #define CARD_TYPE_USB_USB 6
 /** card type PCIE_USB */
 #define CARD_TYPE_PCIE_USB 7
+#ifdef SDAW693
+/** card type SDAW693_UART */
+#define CARD_TYPE_SDAW693_UART 1 // As per datasheet/SoC design
+#endif
 /** card type SD9177_UART */
 #define CARD_TYPE_SD9177_UART 1 // As per datasheet/SoC design
 /** card type SDIW624_UARTSPI */
@@ -408,6 +412,7 @@ typedef enum _MOAL_HARDWARE_STATUS {
 #define WIFI_STATUS_SCAN_TIMEOUT 8
 #define WIFI_STATUS_FW_DUMP 9
 #define WIFI_STATUS_FW_RELOAD 10
+#define WIFI_STATUS_FW_RECOVERY_FAIL 11
 
 /** fw cap info 11p */
 #define FW_CAPINFO_80211P MBIT(24)
@@ -1026,7 +1031,7 @@ mlan_status woal_do_dfs_cac(moal_private *priv,
 #define AUTH_TX_DEFAULT_WAIT_TIME 2400
 
 /** max retry count for wait_event_interupptible_xx while loop */
-#define MAX_RETRY_CNT 100
+#define MAX_RETRY_CNT 300
 /** wait_queue structure */
 typedef struct _wait_queue {
 	/** wait_queue_head */
@@ -2124,6 +2129,7 @@ typedef struct _card_info {
 	t_u8 func1_reg_end;
 	t_u32 slew_rate_reg;
 	t_u8 slew_rate_bit_offset;
+	t_u32 fw_winner_status_reg;
 #endif
 #if defined(SDIO) || defined(PCIE)
 	t_u32 fw_stuck_code_reg;
@@ -2724,6 +2730,8 @@ typedef struct _moal_mod_para {
 	int dual_nb;
 	/* reject addba req config for HS or FW Auto-reconnect */
 	t_u32 reject_addba_req;
+	/** disable_11h_tpc setting */
+	int disable_11h_tpc;
 } moal_mod_para;
 
 void woal_tp_acnt_timer_func(void *context);
@@ -3265,6 +3273,7 @@ struct _moal_handle {
 #endif
 	t_u32 ips_ctrl;
 	BOOLEAN is_edmac_enabled;
+	bool driver_init;
 };
 
 /**
@@ -4330,6 +4339,7 @@ moal_private *woal_add_interface(moal_handle *handle, t_u8 bss_num,
 				 t_u8 bss_type);
 void woal_clean_up(moal_handle *handle);
 void woal_send_auto_recovery_complete_event(moal_handle *handle);
+void woal_send_auto_recovery_failure_event(moal_handle *handle);
 void woal_remove_interface(moal_handle *handle, t_u8 bss_index);
 void woal_set_multicast_list(struct net_device *dev);
 mlan_status woal_request_fw(moal_handle *handle);
@@ -4544,5 +4554,20 @@ void woal_print_firmware_dump_buf(t_u8 *pfd_buf, t_u64 fwdump_len);
 #if !defined(STA_CFG80211) && !defined(UAP_CFG80211)
 unsigned int woal_classify8021d(struct sk_buff *skb);
 #endif
+
+#define ENUM_ELEMENT(name, id) name = id
+#define ENUM_ELEMENT_LAST(name) name
+enum host_error_code_id {
+#include "ioctl_error_codes.h"
+};
+#undef ENUM_ELEMENT
+#undef ENUM_ELEMENT_LAST
+
+struct reflective_enum_element {
+	int id;
+	const char *name;
+};
+
+extern const char *wlan_errorcode_get_name(enum host_error_code_id id);
 
 #endif /* _MOAL_MAIN_H */
