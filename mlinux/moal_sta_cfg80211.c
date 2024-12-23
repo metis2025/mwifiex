@@ -112,8 +112,11 @@ static void woal_cfg80211_abort_scan(struct wiphy *wiphy,
 #endif
 static int woal_cfg80211_connect(struct wiphy *wiphy, struct net_device *dev,
 				 struct cfg80211_connect_params *sme);
+
+#if CFG80211_VERSION_CODE > KERNEL_VERSION(4, 12, 14)
 static int woal_cfg80211_set_psk(moal_private *priv,
 				 struct cfg80211_connect_params *sme);
+#endif
 static int woal_cfg80211_disconnect(struct wiphy *wiphy, struct net_device *dev,
 				    t_u16 reason_code);
 
@@ -3531,13 +3534,16 @@ int woal_cfg80211_assoc(moal_private *priv, void *sme, t_u8 wait_option,
 		goto done;
 	}
 
-	if (conn_param && conn_param->crypto.psk) {
+#if CFG80211_VERSION_CODE > KERNEL_VERSION(4, 12, 14)
+	if (conn_param && conn_param->crypto.psk &&
+	    priv->phandle->card_info->embedded_supp) {
 		if (MLAN_STATUS_SUCCESS !=
 		    woal_cfg80211_set_psk(priv, conn_param)) {
 			ret = -EFAULT;
 			goto done;
 		}
 	}
+#endif
 
 #ifdef STA_CFG80211
 	if (IS_STA_CFG80211(priv->phandle->params.cfg80211_wext)) {
@@ -5571,6 +5577,7 @@ static int woal_start_ft_roaming(moal_private *priv,
 	return ret;
 }
 
+#if CFG80211_VERSION_CODE > KERNEL_VERSION(4, 12, 14)
 /**
  * @brief Set psk to firmware in embedded supplicant mode
  *
@@ -5623,6 +5630,7 @@ done:
 	LEAVE();
 	return ret;
 }
+#endif
 
 /**
  * @brief Request the driver to connect to the ESS with
@@ -10870,10 +10878,12 @@ mlan_status woal_register_cfg80211(moal_private *priv)
 	wiphy->features |= NL80211_FEATURE_TDLS_CHANNEL_SWITCH;
 #endif
 
+#if CFG80211_VERSION_CODE > KERNEL_VERSION(4, 12, 14)
 	/* Enable support for offloading EAPOL handshakes for WPA/WPA2. */
 	if (!moal_extflg_isset(priv->phandle, EXT_HOST_MLME))
 		wiphy_ext_feature_set(
 			wiphy, NL80211_EXT_FEATURE_4WAY_HANDSHAKE_STA_PSK);
+#endif
 
 #if CFG80211_VERSION_CODE >= KERNEL_VERSION(4, 0, 0)
 #define WLAN_EXT_FEATURE_DFS_OFFLOAD 25

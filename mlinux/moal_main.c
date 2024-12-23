@@ -139,7 +139,7 @@ static struct _card_info card_info_SD8801 = {
 #endif
 	.sniffer_support = 1,
 	.per_pkt_cfg_support = 0,
-	.host_mlme_required = 0,
+	.host_mlme_required = 1,
 };
 #endif
 #ifdef SD8887
