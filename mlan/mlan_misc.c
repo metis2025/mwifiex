@@ -2759,6 +2759,7 @@ static void wlan_get_ap_ext_cap(mlan_private *pmpriv, ExtCap_t *ext_cap)
 	pbss_desc = &pmpriv->curr_bss_params.bss_descriptor;
 	memset(pmadapter, ext_cap, 0, sizeof(ExtCap_t));
 	if (pbss_desc->pext_cap) {
+		// coverity[cert_exp34_c_violation:SUPPRESS]
 		memcpy_ext(pmadapter, (t_u8 *)ext_cap,
 			   (t_u8 *)pbss_desc->pext_cap +
 				   sizeof(IEEEtypes_Header_t),
@@ -3942,7 +3943,9 @@ void wlan_add_iPhone_entry(mlan_private *priv, t_u8 *mac)
 		       MAX_IPHONE_FILTER_ENTRIES * MLAN_MAC_ADDR_LENGTH);
 
 		/* copy valid entries into original list */
-		for (i = 0, j = 1; i < MAX_IPHONE_FILTER_ENTRIES; i++) {
+		for (i = 0, j = 1; i < MAX_IPHONE_FILTER_ENTRIES &&
+				   j < MAX_IPHONE_FILTER_ENTRIES;
+		     i++) {
 			if (memcmp(priv->adapter,
 				   &t_iphonefilters[i * MLAN_MAC_ADDR_LENGTH],
 				   &null_mac_addr, MLAN_MAC_ADDR_LENGTH) != 0) {

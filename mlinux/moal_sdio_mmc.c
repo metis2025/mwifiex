@@ -1987,7 +1987,7 @@ static mlan_status woal_sdiommc_get_fw_name(moal_handle *handle)
 
 		switch (revision_id) {
 		case SDAW693_A0:
-			if (strap == CARD_TYPE_SD_UART)
+			if (strap == CARD_TYPE_SDAW693_UART)
 				strncpy(handle->card_info->fw_name,
 					SDUARTAW693_COMBO_FW_NAME,
 					FW_NAMW_MAX_LEN);
@@ -1999,7 +1999,7 @@ static mlan_status woal_sdiommc_get_fw_name(moal_handle *handle)
 				SDAW693_DEFAULT_WLAN_FW_NAME, FW_NAMW_MAX_LEN);
 			break;
 		case SDAW693_A1:
-			if (strap == CARD_TYPE_SD_UART)
+			if (strap == CARD_TYPE_SDAW693_UART)
 				strncpy(handle->card_info->fw_name,
 					SDUARTAW693_COMBO_V1_FW_NAME,
 					FW_NAMW_MAX_LEN);

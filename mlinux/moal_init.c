@@ -565,16 +565,35 @@ static mlan_status parse_line_read_string(t_u8 *line, char **out_str)
 		ret = MLAN_STATUS_FAILURE;
 		goto out;
 	}
+	if ((p - line) >= (MAX_LINE_LEN - 1)) {
+		PRINTM(MERROR,
+		       "err(1):input data size exceeds the dest buff limit\n");
+		ret = MLAN_STATUS_FAILURE;
+		goto out;
+	}
 	p++;
 	pstr = p;
-	while (*pstr) {
-		if (*pstr == '\"')
-			*pstr = '\0';
-		pstr++;
+	if ((pstr - line) >= (MAX_LINE_LEN - 1)) {
+		PRINTM(MERROR,
+		       "err(2):input data size exceeds the dest buff limit\n");
+		ret = MLAN_STATUS_FAILURE;
+		goto out;
+	} else {
+		while (*pstr) {
+			if (*pstr == '\"')
+				*pstr = '\0';
+			pstr++;
+			if ((pstr - line) >= (MAX_LINE_LEN - 1)) {
+				PRINTM(MERROR,
+				       "err(3):input data size exceeds the dest buff limit\n");
+				ret = MLAN_STATUS_FAILURE;
+				goto out;
+			}
+		}
+		if (*p == '\0')
+			p++;
+		*out_str = p;
 	}
-	if (*p == '\0')
-		p++;
-	*out_str = p;
 out:
 	return ret;
 }

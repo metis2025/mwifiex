@@ -981,8 +981,17 @@ enum host_cmd_id {
 #define IS_FW_SUPPORT_EASY_MESH(_adapter)                                      \
 	(_adapter->fw_cap_ext & FW_CAPINFO_EASY_MESH)
 
+/* EASYMESH_EXTRA_BYTES = 6 Bytes of Mac address + 2 Bytes Reserved */
+#define EASYMESH_EXTRA_BYTES 8
+
 #define Tx_PD_SIZEOF(_adapter)                                                 \
-	(IS_FW_SUPPORT_EASY_MESH(_adapter) ? sizeof(TxPD) : (sizeof(TxPD) - 8))
+	(IS_FW_SUPPORT_EASY_MESH(_adapter) ?                                   \
+		 sizeof(TxPD) :                                                \
+		 (sizeof(TxPD) - EASYMESH_EXTRA_BYTES))
+#define Rx_PD_SIZEOF(_adapter)                                                 \
+	(IS_FW_SUPPORT_EASY_MESH(_adapter) ?                                   \
+		 sizeof(RxPD) :                                                \
+		 (sizeof(RxPD) - EASYMESH_EXTRA_BYTES))
 
 /** MrvlIEtypes_PrevBssid_t */
 typedef MLAN_PACK_START struct _MrvlIEtypes_PrevBssid_t {

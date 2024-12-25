@@ -922,7 +922,9 @@ mlan_status moal_get_hw_spec_complete(t_void *pmoal, mlan_status status,
 	moal_handle *handle = (moal_handle *)pmoal;
 	int i;
 	t_u32 drv_mode = handle->params.drv_mode;
-
+#ifdef PCIE9098
+	size_t drv_ver_len = strlen(driver_version);
+#endif
 	ENTER();
 	if (status == MLAN_STATUS_SUCCESS) {
 		PRINTM(MCMND, "Get Hw Spec done, fw_cap=0x%x\n", phw->fw_cap);
@@ -942,9 +944,13 @@ mlan_status moal_get_hw_spec_complete(t_void *pmoal, mlan_status status,
 					strlen(driver_version) -
 						strlen(INTF_CARDTYPE) -
 						strlen(KERN_VERSION));
+			if (drv_ver_len >= MLAN_MAX_VER_STR_LEN - 1) {
+				drv_ver_len = MLAN_MAX_VER_STR_LEN - 1;
+			}
 			moal_memcpy_ext(handle, handle->driver_version,
-					driver_version, strlen(driver_version),
+					driver_version, drv_ver_len,
 					MLAN_MAX_VER_STR_LEN - 1);
+			handle->driver_version[drv_ver_len] = '\0';
 		}
 #endif
 		if (phw->fw_cap & FW_CAPINFO_DISABLE_NAN)
@@ -1065,11 +1071,12 @@ mlan_status moal_ioctl_complete(t_void *pmoal, pmlan_ioctl_req pioctl_req,
 			       pioctl_req->req_id);
 		else
 			PRINTM(MERROR,
-			       "IOCTL failed: %p id=0x%x, sub_id=0x%x action=%d, status_code=0x%x\n",
+			       "IOCTL failed: %p id=0x%x, sub_id=0x%x action=%d, status_code=0x%x [%s]\n",
 			       pioctl_req, pioctl_req->req_id,
 			       (*(t_u32 *)pioctl_req->pbuf),
-			       (int)pioctl_req->action,
-			       pioctl_req->status_code);
+			       (int)pioctl_req->action, pioctl_req->status_code,
+			       wlan_errorcode_get_name(
+				       pioctl_req->status_code));
 	else
 		PRINTM(MIOCTL,
 		       "IOCTL completed: %p id=0x%x sub_id=0x%x, action=%d,  status=%d, status_code=0x%x\n",
@@ -3089,7 +3096,12 @@ mlan_status moal_recv_event(t_void *pmoal, pmlan_event pmevent)
 		woal_wake_queue(priv->netdev);
 		moal_connection_status_check_pmqos(pmoal);
 		break;
-
+	case MLAN_EVENT_ID_DRV_ASSOC_FAILURE:
+		PRINTM(MERROR, "wlan:MLAN_EVENT_ASSOC_FAILURE\n");
+#ifdef STA_CFG80211
+		priv->cfg_disconnect = MTRUE;
+#endif
+		break;
 	case MLAN_EVENT_ID_DRV_ASSOC_SUCC_LOGGER:
 	case MLAN_EVENT_ID_DRV_ASSOC_FAILURE_LOGGER:
 	case MLAN_EVENT_ID_DRV_DISCONNECT_LOGGER:
@@ -3734,7 +3746,12 @@ mlan_status moal_recv_event(t_void *pmoal, pmlan_event pmevent)
 					&priv->phandle->cac_timer);
 			priv->phandle->is_cac_timer_set = MFALSE;
 			if (radar_detected) {
-#if CFG80211_VERSION_CODE >= KERNEL_VERSION(3, 14, 0)
+#if CFG80211_VERSION_CODE >= KERNEL_VERSION(6, 12, 0)
+				cfg80211_cac_event(priv->netdev,
+						   &priv->phandle->dfs_channel,
+						   NL80211_RADAR_CAC_ABORTED,
+						   GFP_KERNEL, 0);
+#elif CFG80211_VERSION_CODE >= KERNEL_VERSION(3, 14, 0)
 				cfg80211_cac_event(priv->netdev,
 						   &priv->phandle->dfs_channel,
 						   NL80211_RADAR_CAC_ABORTED,
@@ -3756,11 +3773,20 @@ mlan_status moal_recv_event(t_void *pmoal, pmlan_event pmevent)
 					// WARN_ON(!time_after_eq(jiffies,
 					// timeout)); mdelay(100); Using
 					// optimized delay
+#if CFG80211_VERSION_CODE >= KERNEL_VERSION(6, 12, 0)
+					timeout =
+						(priv->wdev->links[0]
+							 .cac_start_time +
+						 msecs_to_jiffies(
+							 priv->wdev->links[0]
+								 .cac_time_ms));
+#else
 					timeout =
 						(priv->wdev->cac_start_time +
 						 msecs_to_jiffies(
 							 priv->wdev
 								 ->cac_time_ms));
+#endif
 					if (!time_after_eq(jiffies, timeout)) {
 						/* Exact time to make host and
 						 * device timer in sync */
@@ -3777,7 +3803,12 @@ mlan_status moal_recv_event(t_void *pmoal, pmlan_event pmevent)
 				}
 #endif
 
-#if CFG80211_VERSION_CODE >= KERNEL_VERSION(3, 14, 0)
+#if CFG80211_VERSION_CODE >= KERNEL_VERSION(6, 12, 0)
+				cfg80211_cac_event(priv->netdev,
+						   &priv->phandle->dfs_channel,
+						   NL80211_RADAR_CAC_FINISHED,
+						   GFP_KERNEL, 0);
+#elif CFG80211_VERSION_CODE >= KERNEL_VERSION(3, 14, 0)
 				cfg80211_cac_event(priv->netdev,
 						   &priv->phandle->dfs_channel,
 						   NL80211_RADAR_CAC_FINISHED,
@@ -3855,7 +3886,12 @@ mlan_status moal_recv_event(t_void *pmoal, pmlan_event pmevent)
 				woal_11h_cancel_chan_report_ioctl(priv,
 								  MOAL_NO_WAIT);
 				/* upstream: inform cfg80211 */
-#if CFG80211_VERSION_CODE >= KERNEL_VERSION(3, 14, 0)
+#if CFG80211_VERSION_CODE >= KERNEL_VERSION(6, 12, 0)
+				cfg80211_cac_event(priv->netdev,
+						   &priv->phandle->dfs_channel,
+						   NL80211_RADAR_CAC_ABORTED,
+						   GFP_KERNEL, 0);
+#elif CFG80211_VERSION_CODE >= KERNEL_VERSION(3, 14, 0)
 				cfg80211_cac_event(priv->netdev,
 						   &priv->phandle->dfs_channel,
 						   NL80211_RADAR_CAC_ABORTED,

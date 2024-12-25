@@ -299,6 +299,10 @@ typedef t_u8 BOOLEAN;
 #define CARD_TYPE_USB_USB 6
 /** card type PCIE_USB */
 #define CARD_TYPE_PCIE_USB 7
+#ifdef SDAW693
+/** card type SDAW693_UART */
+#define CARD_TYPE_SDAW693_UART 1 // As per datasheet/SoC design
+#endif
 /** card type SD9177_UART */
 #define CARD_TYPE_SD9177_UART 1 // As per datasheet/SoC design
 /** card type SDIW624_UARTSPI */
@@ -1027,7 +1031,7 @@ mlan_status woal_do_dfs_cac(moal_private *priv,
 #define AUTH_TX_DEFAULT_WAIT_TIME 2400
 
 /** max retry count for wait_event_interupptible_xx while loop */
-#define MAX_RETRY_CNT 100
+#define MAX_RETRY_CNT 300
 /** wait_queue structure */
 typedef struct _wait_queue {
 	/** wait_queue_head */
@@ -4550,5 +4554,20 @@ void woal_print_firmware_dump_buf(t_u8 *pfd_buf, t_u64 fwdump_len);
 #if !defined(STA_CFG80211) && !defined(UAP_CFG80211)
 unsigned int woal_classify8021d(struct sk_buff *skb);
 #endif
+
+#define ENUM_ELEMENT(name, id) name = id
+#define ENUM_ELEMENT_LAST(name) name
+enum host_error_code_id {
+#include "ioctl_error_codes.h"
+};
+#undef ENUM_ELEMENT
+#undef ENUM_ELEMENT_LAST
+
+struct reflective_enum_element {
+	int id;
+	const char *name;
+};
+
+extern const char *wlan_errorcode_get_name(enum host_error_code_id id);
 
 #endif /* _MOAL_MAIN_H */

@@ -362,6 +362,11 @@ static int wlan_11n_get_num_aggrpkts(mlan_private *priv, t_u8 *data,
 	t_u8 forward_flag = MFALSE;
 
 	ENTER();
+	if (!data) {
+		PRINTM(MERROR, "%s(): null packet data\n", __func__);
+		LEAVE();
+		return pkt_count;
+	}
 	while (total_pkt_len >= hdr_len) {
 		if (priv->bss_role == MLAN_BSS_ROLE_UAP &&
 		    wlan_uap_check_forward(priv, (Eth803Hdr_t *)data))
@@ -622,6 +627,7 @@ mlan_status wlan_11n_deaggregate_pkt(mlan_private *priv, pmlan_buffer pmbuf)
 			pmadapter->pmoal_handle, &out_ts_sec, &out_ts_usec);
 		delay += (t_s32)(out_ts_sec - in_ts_sec) * 1000000;
 		delay += (t_s32)(out_ts_usec - in_ts_usec);
+		// coverity[misra_c_2012_directive_4_14_violation:SUPPRESS]
 		pmadapter->callbacks.moal_amsdu_tp_accounting(
 			pmadapter->pmoal_handle, delay, copy_delay);
 	}

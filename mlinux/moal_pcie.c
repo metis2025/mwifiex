@@ -816,10 +816,10 @@ static int woal_pcie_suspend(struct pci_dev *pdev, pm_message_t state)
 	}
 	woal_flush_workqueue(handle);
 	if (!keep_power) {
+		handle->surprise_removed = MTRUE;
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(3, 18, 0)
 		woal_do_flr(handle, true, false);
 #endif
-		handle->surprise_removed = MTRUE;
 		handle->is_suspended = MTRUE;
 	}
 #ifdef IMX_SUPPORT

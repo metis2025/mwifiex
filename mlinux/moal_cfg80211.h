@@ -70,6 +70,12 @@
 #define MRVL_PKT_TYPE_MGMT_EASYMESH 0xCF
 #endif
 
+#if defined(STA_CFG80211) || defined(UAP_CFG80211)
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 0, 0)
+void woal_cfg80211_stop_iface(moal_handle *handle);
+#endif
+#endif
+
 mlan_status woal_cfg80211_set_key(moal_private *priv, t_u8 is_enable_wep,
 				  t_u32 cipher, const t_u8 *key, int key_len,
 				  const t_u8 *seq, int seq_len, t_u8 key_index,
@@ -477,7 +483,12 @@ int woal_cfg80211_del_station(struct wiphy *wiphy, struct net_device *dev,
 #endif
 
 #if KERNEL_VERSION(3, 12, 0) <= CFG80211_VERSION_CODE
-#if KERNEL_VERSION(3, 15, 0) <= CFG80211_VERSION_CODE
+#if KERNEL_VERSION(6, 12, 0) <= CFG80211_VERSION_CODE
+int woal_cfg80211_start_radar_detection(struct wiphy *wiphy,
+					struct net_device *dev,
+					struct cfg80211_chan_def *chandef,
+					u32 cac_time_msi, int link_id);
+#elif KERNEL_VERSION(3, 15, 0) <= CFG80211_VERSION_CODE
 int woal_cfg80211_start_radar_detection(struct wiphy *wiphy,
 					struct net_device *dev,
 					struct cfg80211_chan_def *chandef,

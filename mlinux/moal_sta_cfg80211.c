@@ -112,7 +112,8 @@ static void woal_cfg80211_abort_scan(struct wiphy *wiphy,
 #endif
 static int woal_cfg80211_connect(struct wiphy *wiphy, struct net_device *dev,
 				 struct cfg80211_connect_params *sme);
-
+static int woal_cfg80211_set_psk(moal_private *priv,
+				 struct cfg80211_connect_params *sme);
 static int woal_cfg80211_disconnect(struct wiphy *wiphy, struct net_device *dev,
 				    t_u16 reason_code);
 
@@ -2849,9 +2850,13 @@ void woal_host_mlme_process_assoc_timeout(moal_private *priv,
 	data.timeout = 1;
 	data.bss[0] = bss;
 	PRINTM(MEVENT, "wlan: HostMlme assoc failure\n");
+	/* 100ms delay to report to CFG to sync redv_assoc and assoc_failure API
+	 * in CFG to hold/unhold BSS */
+	woal_sched_timeout(100);
 	cfg80211_assoc_failure(priv->netdev, &data);
 #else
 	PRINTM(MEVENT, "wlan: HostMlme assoc timeout\n");
+	woal_sched_timeout(100);
 	cfg80211_assoc_timeout(priv->netdev, bss);
 #endif
 	memset(priv->cfg_bssid, 0, ETH_ALEN);
@@ -3525,6 +3530,15 @@ int woal_cfg80211_assoc(moal_private *priv, void *sme, t_u8 wait_option,
 		ret = -EFAULT;
 		goto done;
 	}
+
+	if (conn_param && conn_param->crypto.psk) {
+		if (MLAN_STATUS_SUCCESS !=
+		    woal_cfg80211_set_psk(priv, conn_param)) {
+			ret = -EFAULT;
+			goto done;
+		}
+	}
+
 #ifdef STA_CFG80211
 	if (IS_STA_CFG80211(priv->phandle->params.cfg80211_wext)) {
 		/** Check if current roaming support OKC offload roaming */
@@ -5556,6 +5570,60 @@ static int woal_start_ft_roaming(moal_private *priv,
 	LEAVE();
 	return ret;
 }
+
+/**
+ * @brief Set psk to firmware in embedded supplicant mode
+ *
+ * @param wiphy           A pointer to priv structure
+ * @param sme             A pointer to cfg80211_connect_params structure
+ *
+ * @return                0 -- success, otherwise fail
+ */
+static int woal_cfg80211_set_psk(moal_private *priv,
+				 struct cfg80211_connect_params *sme)
+{
+	mlan_ioctl_req *req = NULL;
+	mlan_ds_sec_cfg *sec = NULL;
+	int ret = 0;
+	mlan_status status = MLAN_STATUS_SUCCESS;
+
+	ENTER();
+
+	if (!priv->phandle->card_info->embedded_supp) {
+		PRINTM(MERROR, "Not supported cmd on this card\n");
+		ret = -EOPNOTSUPP;
+		goto done;
+	}
+
+	req = woal_alloc_mlan_ioctl_req(sizeof(mlan_ds_sec_cfg));
+	if (req == NULL) {
+		ret = -ENOMEM;
+		goto done;
+	}
+
+	req->req_id = MLAN_IOCTL_SEC_CFG;
+	sec = (mlan_ds_sec_cfg *)req->pbuf;
+	sec->sub_command = MLAN_OID_SEC_CFG_PASSPHRASE;
+	req->action = MLAN_ACT_SET;
+
+	sec->param.passphrase.ssid.ssid_len = sme->ssid_len;
+	memcpy(sec->param.passphrase.ssid.ssid, sme->ssid, sme->ssid_len);
+
+	memcpy((t_u8 *)(sec->param.passphrase.psk.pmk.pmk), sme->crypto.psk,
+	       MLAN_PMK_HEXSTR_LENGTH / 2);
+	sec->param.passphrase.psk_type = MLAN_PSK_PMK;
+
+	status = woal_request_ioctl(priv, req, MOAL_IOCTL_WAIT);
+	if (status != MLAN_STATUS_SUCCESS)
+		ret = -EFAULT;
+done:
+	if (status != MLAN_STATUS_PENDING)
+		kfree(req);
+
+	LEAVE();
+	return ret;
+}
+
 /**
  * @brief Request the driver to connect to the ESS with
  * the specified parameters from kernel
@@ -6544,6 +6612,27 @@ int woal_cfg80211_remain_on_channel_cfg(moal_private *priv, t_u8 wait_option,
 		*status = chan_cfg.status;
 	else
 		ret = -EFAULT;
+
+#if CFG80211_VERSION_CODE >= KERNEL_VERSION(3, 8, 0)
+	if (remove) {
+		if (priv->host_mlme &&
+		    (priv->auth_flag & HOST_MLME_AUTH_PENDING)) {
+			/* abort the pending auth exchange */
+#if CFG80211_VERSION_CODE >= KERNEL_VERSION(3, 11, 0)
+			if (priv->assoc_bss) {
+				PRINTM(MEVENT,
+				       "wlan: HostMlme auth remain on channel cancelled\n");
+				cfg80211_auth_timeout(priv->netdev,
+						      priv->assoc_bss->bssid);
+			}
+#endif
+			priv->auth_flag = 0;
+			priv->host_mlme = MFALSE;
+			priv->auth_alg = 0xFFFF;
+		}
+	}
+#endif
+
 	LEAVE();
 	return ret;
 }
@@ -10781,6 +10870,11 @@ mlan_status woal_register_cfg80211(moal_private *priv)
 	wiphy->features |= NL80211_FEATURE_TDLS_CHANNEL_SWITCH;
 #endif
 
+	/* Enable support for offloading EAPOL handshakes for WPA/WPA2. */
+	if (!moal_extflg_isset(priv->phandle, EXT_HOST_MLME))
+		wiphy_ext_feature_set(
+			wiphy, NL80211_EXT_FEATURE_4WAY_HANDSHAKE_STA_PSK);
+
 #if CFG80211_VERSION_CODE >= KERNEL_VERSION(4, 0, 0)
 #define WLAN_EXT_FEATURE_DFS_OFFLOAD 25
 	if (moal_extflg_isset(priv->phandle, EXT_DFS_OFFLOAD)) {
@@ -10943,7 +11037,12 @@ mlan_status woal_register_cfg80211(moal_private *priv)
 	wiphy->extended_capabilities_len = sizeof(priv->extended_capabilities);
 #endif
 
-	woal_cfg80211_init_wiphy(priv, wiphy, &fw_info, MOAL_IOCTL_WAIT);
+	ret = woal_cfg80211_init_wiphy(priv, wiphy, &fw_info, MOAL_IOCTL_WAIT);
+	if (ret == MLAN_STATUS_FAILURE) {
+		PRINTM(MERROR, "Wiphy device initialization failed!\n");
+		ret = MLAN_STATUS_FAILURE;
+		goto err_wiphy;
+	}
 	if (wiphy_register(wiphy) < 0) {
 		PRINTM(MERROR, "Wiphy device registration failed!\n");
 		ret = MLAN_STATUS_FAILURE;

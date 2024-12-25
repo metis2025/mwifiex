@@ -2898,7 +2898,7 @@ done:
 static int woal_priv_deauth(moal_private *priv, t_u8 *respbuf, t_u32 respbuflen)
 {
 	int ret = 0;
-	t_u8 mac[ETH_ALEN];
+	t_u8 mac[ETH_ALEN] = {0};
 
 	ENTER();
 
@@ -7873,6 +7873,12 @@ static int woal_priv_per_pkt_cfg(moal_private *priv, t_u8 *respbuf,
 	if (*pos == 0) {
 		/* GET operation */
 		pos++;
+		if ((pos - respbuf) >= respbuflen) {
+			PRINTM(MERROR,
+			       "err: Size of Respbuf(Get) is not sufficient\n");
+			ret = -EFAULT;
+			goto done;
+		}
 		if (priv->tx_protocols.protocol_num) {
 			perpkt = (mlan_per_pkt_cfg *)pos;
 			perpkt->type = TLV_TYPE_PER_PKT_CFG;
@@ -7907,6 +7913,12 @@ static int woal_priv_per_pkt_cfg(moal_private *priv, t_u8 *respbuf,
 		/* SET operation */
 		req->action = MLAN_ACT_SET;
 		pos++;
+		if ((pos - respbuf) >= respbuflen) {
+			PRINTM(MERROR,
+			       "Err: Size of Respbuf(Set) is not sufficient\n");
+			ret = -EFAULT;
+			goto done;
+		}
 		left_len--;
 		while (*pos == TLV_TYPE_PER_PKT_CFG && (left_len > 2)) {
 			perpkt = (mlan_per_pkt_cfg *)pos;
@@ -18324,7 +18336,7 @@ static int woal_priv_roam_offload_cfg(moal_private *priv, t_u8 *respbuf,
 {
 	int ret = 0, user_data_len = 0, header_len = 0, data = 0;
 	char *begin = NULL, *end = NULL, *pvariable_name = NULL;
-	t_u8 mac_addr[MLAN_MAC_ADDR_LENGTH];
+	t_u8 mac_addr[MLAN_MAC_ADDR_LENGTH] = {0};
 	woal_roam_offload_cfg roam_offload_cfg;
 	t_u8 len = 0;
 	int count = 0, i = 0;

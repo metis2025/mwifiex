@@ -353,6 +353,36 @@ t_u8 woal_ieee_band_to_radio_type(t_u8 ieee_band)
 	return radio_type;
 }
 
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 0, 0)
+/**
+ *  @brief Request kernelt to stop AP interface
+ *
+ *  @param handle           A pointer to moal_handle structure
+ *
+ *  @return                 N/A
+ */
+void woal_cfg80211_stop_iface(moal_handle *handle)
+{
+	int i = 0;
+
+	ENTER();
+
+	for (i = 0; i < handle->priv_num; i++) {
+		if (handle->priv[i] &&
+		    (GET_BSS_ROLE(handle->priv[i]) == MLAN_BSS_ROLE_UAP) &&
+		    handle->priv[i]->bss_started == MTRUE) {
+			PRINTM(MMSG, "stop iface, bss role:%d %s\n",
+			       GET_BSS_ROLE(handle->priv[i]),
+			       handle->priv[i]->netdev->name);
+			cfg80211_stop_iface(handle->priv[i]->wdev->wiphy,
+					    handle->priv[i]->wdev, GFP_KERNEL);
+		}
+	}
+
+	LEAVE();
+}
+#endif
+
 /**
  *  @brief Set/Enable encryption key
  *
@@ -1105,7 +1135,10 @@ void woal_cancel_cac(moal_private *priv)
 		if (woal_11h_cancel_chan_report_ioctl(priv, MOAL_IOCTL_WAIT))
 			PRINTM(MERROR, "%s: cancel chan report failed \n",
 			       __func__);
-#if CFG80211_VERSION_CODE >= KERNEL_VERSION(3, 14, 0)
+#if CFG80211_VERSION_CODE >= KERNEL_VERSION(6, 12, 0)
+		cfg80211_cac_event(priv->netdev, &priv->phandle->dfs_channel,
+				   NL80211_RADAR_CAC_ABORTED, GFP_KERNEL, 0);
+#elif CFG80211_VERSION_CODE >= KERNEL_VERSION(3, 14, 0)
 		cfg80211_cac_event(priv->netdev, &priv->phandle->dfs_channel,
 				   NL80211_RADAR_CAC_ABORTED, GFP_KERNEL);
 #else
@@ -1200,7 +1233,12 @@ int woal_cfg80211_change_virtual_intf(struct wiphy *wiphy,
 				PRINTM(MERROR,
 				       "%s: cancel chan report failed \n",
 				       __func__);
-#if CFG80211_VERSION_CODE >= KERNEL_VERSION(3, 14, 0)
+#if CFG80211_VERSION_CODE >= KERNEL_VERSION(6, 12, 0)
+			cfg80211_cac_event(priv->netdev,
+					   &priv->phandle->dfs_channel,
+					   NL80211_RADAR_CAC_ABORTED,
+					   GFP_KERNEL, 0);
+#elif CFG80211_VERSION_CODE >= KERNEL_VERSION(3, 14, 0)
 			cfg80211_cac_event(priv->netdev,
 					   &priv->phandle->dfs_channel,
 					   NL80211_RADAR_CAC_ABORTED,
