@@ -5,7 +5,7 @@
  *  it is ready.
  *
  *
- *  Copyright 2008-2024 NXP
+ *  Copyright 2008-2025 NXP
  *
  *  This software file (the File) is distributed by NXP
  *  under the terms of the GNU General Public License Version 2, June 1991
@@ -701,7 +701,7 @@ static mlan_status wlan_cmd_tx_power_cfg(pmlan_private pmpriv,
 	switch (cmd_action) {
 	case HostCmd_ACT_GEN_SET:
 		ptxp = (HostCmd_DS_TXPWR_CFG *)pdata_buf;
-		if (ptxp->mode) {
+		if (ptxp && ptxp->mode) {
 			ppg_tlv = (MrvlTypes_Power_Group_t
 					   *)((t_u8 *)pdata_buf +
 					      sizeof(HostCmd_DS_TXPWR_CFG));

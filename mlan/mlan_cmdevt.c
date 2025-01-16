@@ -4,7 +4,7 @@
  *  @brief This file contains the handling of CMD/EVENT in MLAN
  *
  *
- *  Copyright 2009-2024 NXP
+ *  Copyright 2009-2025 NXP
  *
  *  This software file (the File) is distributed by NXP
  *  under the terms of the GNU General Public License Version 2, June 1991
@@ -7771,6 +7771,10 @@ mlan_status wlan_cmd_802_11_rf_antenna(pmlan_private pmpriv,
 			sizeof(HostCmd_DS_802_11_RF_ANTENNA) + S_DS_GEN);
 
 	if (cmd_action == HostCmd_ACT_GEN_SET) {
+		if (!pdata_buf) {
+			LEAVE();
+			return MLAN_STATUS_FAILURE;
+		}
 		if (IS_STREAM_2X2(pmpriv->adapter->feature_control)) {
 			pantenna->action_tx =
 				wlan_cpu_to_le16(HostCmd_ACT_SET_TX);

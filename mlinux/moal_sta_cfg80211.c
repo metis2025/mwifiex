@@ -3,7 +3,7 @@
  * @brief This file contains the functions for STA CFG80211.
  *
  *
- * Copyright 2011-2024 NXP
+ * Copyright 2011-2025 NXP
  *
  * This software file (the File) is distributed by NXP
  * under the terms of the GNU General Public License Version 2, June 1991
@@ -284,6 +284,10 @@ int woal_cfg80211_update_ft_ies(struct wiphy *wiphy, struct net_device *dev,
 				struct cfg80211_update_ft_ies_params *ftie);
 #endif
 #if CFG80211_VERSION_CODE >= KERNEL_VERSION(3, 8, 0)
+static mlan_status woal_get_common_rates(struct net_device *dev,
+					 struct cfg80211_auth_request *req,
+					 t_u32 *tx_control);
+
 static int woal_cfg80211_authenticate(struct wiphy *wiphy,
 				      struct net_device *dev,
 				      struct cfg80211_auth_request *req);
@@ -2326,6 +2330,105 @@ done:
 }
 
 /**
+ *  @brief This function calculates common rates supported
+ *         by AP and STA and updates tx_control
+ *         value.
+ *
+ *  @param dev         A pointer to net_device
+ *
+ *  @param req         A pointer to cfg80211_auth_request
+ *
+ *  @param tx_control  Output: Updated value of tx_control
+ *
+ *  @return            0 -- success, otherwise fail
+ */
+
+static mlan_status woal_get_common_rates(struct net_device *dev,
+					 struct cfg80211_auth_request *req,
+					 t_u32 *tx_control)
+{
+	moal_private *priv = (moal_private *)woal_get_netdev_priv(dev);
+	mlan_scan_resp scan_resp;
+	BSSDescriptor_t *scan_table;
+	int i, k, j;
+	t_u8 *prate = {0};
+	t_u8 rateIndex = 0xff;
+	t_u8 baserates[] = {0x82, 0x84, 0x8b, 0x96, 0x8c, 0x98, 0xb0};
+
+	ENTER();
+	memset(&scan_resp, 0, sizeof(scan_resp));
+	if (MLAN_STATUS_SUCCESS !=
+	    woal_get_scan_table(priv, MOAL_NO_WAIT, &scan_resp)) {
+		LEAVE();
+		return MLAN_STATUS_FAILURE;
+	}
+
+	// Fetch supported rates of AP from scan table
+	if (scan_resp.num_in_scan_table) {
+		scan_table = (BSSDescriptor_t *)scan_resp.pscan_table;
+		for (i = 0; i < (int)scan_resp.num_in_scan_table; i++) {
+			if (req->bss) {
+				if (!memcmp(req->bss->bssid,
+					    scan_table[i].mac_address,
+					    ETH_ALEN)) {
+					prate = (t_u8 *)&(
+						scan_table[i].supported_rates);
+					break;
+				}
+			}
+		}
+	} else {
+		PRINTM(MMSG, "bssid not found in scan list\n");
+		LEAVE();
+		return MLAN_STATUS_FAILURE;
+	}
+	// Calculate rate index value for rate defined in baserates
+	// which is supported by both AP and STA
+	for (j = 0; (j < WLAN_SUPPORTED_RATES && prate[j] != 0); j++) {
+		if (prate[j] >= 0x82) {
+			for (k = 0; k < sizeof(baserates); k++) {
+				if (prate[j] == baserates[k] && k < rateIndex)
+					rateIndex = k;
+			}
+		}
+	}
+	if (rateIndex == 0xff) {
+		PRINTM(MMSG, "AP and STA have no rates as common\n");
+		LEAVE();
+		return MLAN_STATUS_FAILURE;
+	}
+	*tx_control |= 1 << 15;
+	switch (baserates[rateIndex]) {
+	case 0x82:
+		*tx_control |= 0 << 16;
+		break;
+	case 0x84:
+		*tx_control |= 1 << 16;
+		break;
+	case 0x8b:
+		*tx_control |= 2 << 16;
+		break;
+	case 0x96:
+		*tx_control |= 3 << 16;
+		break;
+	case 0x8c:
+		*tx_control |= 5 << 16;
+		break;
+	case 0x98:
+		*tx_control |= 7 << 16;
+		break;
+	case 0xb0:
+		*tx_control |= 9 << 16;
+		break;
+	default:
+		*tx_control = 0;
+		PRINTM(MMSG, "Not support the base rates");
+		break;
+	}
+	LEAVE();
+	return MLAN_STATUS_SUCCESS;
+}
+/**
  *  @brief This function is authentication handler when host MLME
  *          enable.
  *          In this case driver will prepare and send Auth Req.
@@ -2435,6 +2538,10 @@ static int woal_cfg80211_authenticate(struct wiphy *wiphy,
 	}
 	kfree(ssid_bssid);
 
+	if (MLAN_STATUS_SUCCESS !=
+	    woal_get_common_rates(dev, req, &tx_control)) {
+		tx_control = 0;
+	}
 	if ((priv->auth_alg != WLAN_AUTH_SAE) &&
 	    (priv->auth_flag & HOST_MLME_AUTH_PENDING)) {
 		PRINTM(MERROR, "pending auth on going\n");
@@ -2638,7 +2745,6 @@ static int woal_cfg80211_authenticate(struct wiphy *wiphy,
 		pbuf = pmbuf->pbuf + pmbuf->data_offset;
 	}
 	pkt_type = MRVL_PKT_TYPE_MGMT_FRAME;
-	tx_control = 0;
 	/* Add pkt_type and tx_control */
 	moal_memcpy_ext(priv->phandle, pbuf, &pkt_type, sizeof(pkt_type),
 			sizeof(pkt_type));
@@ -3539,6 +3645,7 @@ int woal_cfg80211_assoc(moal_private *priv, void *sme, t_u8 wait_option,
 	    priv->phandle->card_info->embedded_supp) {
 		if (MLAN_STATUS_SUCCESS !=
 		    woal_cfg80211_set_psk(priv, conn_param)) {
+			PRINTM(MERROR, "Embedded supplicant: set psk failed\n");
 			ret = -EFAULT;
 			goto done;
 		}
@@ -10880,9 +10987,12 @@ mlan_status woal_register_cfg80211(moal_private *priv)
 
 #if CFG80211_VERSION_CODE > KERNEL_VERSION(4, 12, 14)
 	/* Enable support for offloading EAPOL handshakes for WPA/WPA2. */
-	if (!moal_extflg_isset(priv->phandle, EXT_HOST_MLME))
+	if (!moal_extflg_isset(priv->phandle, EXT_HOST_MLME) &&
+	    priv->phandle->card_info->embedded_supp &&
+	    moal_extflg_isset(priv->phandle, EXT_CFG80211_EAPOL_OFFLOAD)) {
 		wiphy_ext_feature_set(
 			wiphy, NL80211_EXT_FEATURE_4WAY_HANDSHAKE_STA_PSK);
+	}
 #endif
 
 #if CFG80211_VERSION_CODE >= KERNEL_VERSION(4, 0, 0)

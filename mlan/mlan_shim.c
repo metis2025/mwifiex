@@ -3,7 +3,7 @@
  *  @brief This file contains APIs to MOAL module.
  *
  *
- *  Copyright 2008-2021, 2024 NXP
+ *  Copyright 2008-2021, 2024-2025 NXP
  *
  *  This software file (the File) is distributed by NXP
  *  under the terms of the GNU General Public License Version 2, June 1991
@@ -380,6 +380,7 @@ mlan_status mlan_register(pmlan_device pmdevice, t_void **ppmlan_adapter)
 		PRINTM(MMSG,
 		       "Attach mlan adapter operations.card_type is 0x%x.\n",
 		       pmdevice->card_type);
+		// coverity[cert_exp34_c_violation:SUPPRESS]
 		memcpy_ext(pmadapter, &pmadapter->ops, &mlan_pcie_ops,
 			   sizeof(mlan_adapter_operations),
 			   sizeof(mlan_adapter_operations));
@@ -1233,7 +1234,7 @@ process_start:
 			pmadapter->pm_wakeup_flag = MFALSE;
 #ifdef SDIO
 			if (IS_SD(pmadapter->card_type)) {
-				if (pmadapter->pm_wakeup_timeout == 1) {
+				if (pmadapter->pm_wakeup_timeout == 2) {
 					if (!pmadapter->ops
 						     .wakeup_timeout_recovery(
 							     pmadapter))

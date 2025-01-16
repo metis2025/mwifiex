@@ -3,7 +3,7 @@
  * @brief This file contains the functions for CFG80211 vendor.
  *
  *
- * Copyright 2015-2022, 2024 NXP
+ * Copyright 2015-2022, 2024-2025 NXP
  *
  * This software file (the File) is distributed by NXP
  * under the terms of the GNU General Public License Version 2, June 1991
@@ -2845,6 +2845,7 @@ int woal_filter_packet(moal_private *priv, t_u8 *data, t_u32 len,
 		    pkt_filter->packet_filter_len);
 	DBG_HEXDUMP(MDAT_D, "packet_filter_data", data, len);
 	spin_lock_irqsave(&pkt_filter->lock, flags);
+	// coverity[misra_c_2012_directive_4_14_violation:SUPPRESS]
 	ret = process_packet(pkt_filter->packet_filter_program,
 			     pkt_filter->packet_filter_len, data, len,
 			     filter_age);

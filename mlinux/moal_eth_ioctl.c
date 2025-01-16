@@ -4,7 +4,7 @@
   * @brief This file contains private ioctl functions
 
   *
-  * Copyright 2014-2024 NXP
+  * Copyright 2014-2025 NXP
   *
   * This software file (the File) is distributed by NXP
   * under the terms of the GNU General Public License Version 2, June 1991
@@ -11884,11 +11884,12 @@ static int woal_priv_net_monitor_ioctl(moal_private *priv, t_u8 *respbuf,
 		data[2] = handle->mon_if->band_chan_cfg.band;
 	data[3] = net_mon->channel;
 	data[4] = net_mon->chan_bandwidth;
-	data_length = 5;
-	moal_memcpy_ext(priv->phandle, respbuf, (t_u8 *)data,
-			sizeof(int) * data_length, respbuflen);
-	ret = sizeof(int) * data_length;
-
+	data_length = (t_u32)(5 * sizeof(int));
+	if (data_length < respbuflen) {
+		moal_memcpy_ext(priv->phandle, respbuf, (t_u8 *)data,
+				data_length, data_length);
+		ret = data_length;
+	}
 done:
 	if (status != MLAN_STATUS_PENDING)
 		kfree(req);
@@ -12815,7 +12816,7 @@ static t_u8 woal_get_next_dfs_chan(moal_private *priv)
 	t_u8 chan = 0;
 	ENTER();
 	idx++;
-	if (idx >= priv->auto_dfs_cfg.num_of_chan)
+	if (idx >= priv->auto_dfs_cfg.num_of_chan || idx < 0)
 		idx = 0;
 	for (i = 0; i < priv->auto_dfs_cfg.num_of_chan; i++) {
 		if (priv->chan_rpt_req.chanNum !=

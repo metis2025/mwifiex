@@ -4,7 +4,7 @@
  * driver.
  *
  *
- * Copyright 2018-2022, 2024 NXP
+ * Copyright 2018-2022, 2024-2025 NXP
  *
  * This software file (the File) is distributed by NXP
  * under the terms of the GNU General Public License Version 2, June 1991
@@ -73,6 +73,10 @@ static int pref_dbc;
 #if CFG80211_VERSION_CODE >= KERNEL_VERSION(3, 8, 0)
 static int host_mlme = 1;
 #endif
+#endif
+
+#if CFG80211_VERSION_CODE > KERNEL_VERSION(4, 12, 14)
+static int cfg80211_eapol_offload = 0;
 #endif
 
 static int roamoffload_in_hs;
@@ -1590,8 +1594,24 @@ static mlan_status parse_cfg_read_block(t_u8 *data, t_u32 size,
 			PRINTM(MMSG, "chan_track= %s\n",
 			       moal_extflg_isset(handle, EXT_PMQOS) ? "on" :
 								      "off");
-		} else if (strncmp(line, "keep_previous_scan",
-				   strlen("keep_previous_scan")) == 0) {
+		}
+#if CFG80211_VERSION_CODE > KERNEL_VERSION(4, 12, 14)
+		else if (strncmp(line, "cfg80211_eapol_offload",
+				 strlen("cfg80211_eapol_offload")) == 0) {
+			if (parse_line_read_int(line, &out_data) !=
+			    MLAN_STATUS_SUCCESS)
+				goto err;
+			if (out_data)
+				moal_extflg_set(handle,
+						EXT_CFG80211_EAPOL_OFFLOAD);
+
+			PRINTM(MMSG, "cfg80211_eapol_offload= %d\n",
+			       moal_extflg_isset(handle,
+						 EXT_CFG80211_EAPOL_OFFLOAD));
+		}
+#endif
+		else if (strncmp(line, "keep_previous_scan",
+				 strlen("keep_previous_scan")) == 0) {
 			if (parse_line_read_int(line, &out_data) !=
 			    MLAN_STATUS_SUCCESS)
 				goto err;
@@ -1961,6 +1981,11 @@ static void woal_setup_module_param(moal_handle *handle, moal_mod_para *params)
 
 	if (chan_track)
 		moal_extflg_set(handle, EXT_CHAN_TRACK);
+
+#if CFG80211_VERSION_CODE > KERNEL_VERSION(4, 12, 14)
+	if (cfg80211_eapol_offload)
+		moal_extflg_set(handle, EXT_CFG80211_EAPOL_OFFLOAD);
+#endif
 
 #if CFG80211_VERSION_CODE >= KERNEL_VERSION(3, 14, 0)
 	if (dfs_offload)
@@ -2585,8 +2610,19 @@ void woal_init_from_dev_tree(void)
 				chan_track = data;
 				PRINTM(MIOCTL, "chan_track=%d\n", chan_track);
 			}
-		} else if (!strncmp(prop->name, "keep_previous_scan",
-				    strlen("keep_previous_scan"))) {
+		}
+#if CFG80211_VERSION_CODE > KERNEL_VERSION(4, 12, 14)
+		else if (!strncmp(prop->name, "cfg80211_eapol_offload",
+				  strlen("cfg80211_eapol_offload"))) {
+			if (!of_property_read_u32(dt_node, prop->name, &data)) {
+				cfg80211_eapol_offload = data;
+				PRINTM(MIOCTL, "cfg80211_eapol_offload=%d\n",
+				       cfg80211_eapol_offload);
+			}
+		}
+#endif
+		else if (!strncmp(prop->name, "keep_previous_scan",
+				  strlen("keep_previous_scan"))) {
 			if (!of_property_read_u32(dt_node, prop->name, &data)) {
 				PRINTM(MERROR, "keep_previous_scan=0x%x\n",
 				       data);
@@ -3205,6 +3241,15 @@ module_param(chan_track, int, 0);
 MODULE_PARM_DESC(
 	chan_track,
 	"1: Set channel tracking; 0: Restore channel tracking for 9098 only");
+
+#if CFG80211_VERSION_CODE > KERNEL_VERSION(4, 12, 14)
+// coverity[misra_c_2012_rule_21_2_violation:SUPPRESS]
+// coverity[misra_c_2012_rule_5_2_violation:SUPPRESS]
+module_param(cfg80211_eapol_offload, int, 0);
+// coverity[misra_c_2012_rule_21_2_violation:SUPPRESS]
+MODULE_PARM_DESC(cfg80211_eapol_offload,
+		 "0: Disable eapol offload (default); 1: Enable eapol offload");
+#endif
 
 module_param(keep_previous_scan, int, 0);
 MODULE_PARM_DESC(
