@@ -650,8 +650,6 @@ build:		echo default
 	cp -f mlan.$(MODEXT) $(BINDIR)/mlan$(DBG).$(MODEXT)
 
 	cp -f moal.$(MODEXT) $(BINDIR)/moal$(DBG).$(MODEXT)
-	cp -rpf script/load $(BINDIR)/
-	cp -rpf script/unload $(BINDIR)/
 
 	cp -f README $(BINDIR)
 
