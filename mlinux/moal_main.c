@@ -4,7 +4,7 @@
  * driver.
  *
  *
- * Copyright 2008-2024 NXP
+ * Copyright 2008-2025 NXP
  *
  * This software file (the File) is distributed by NXP
  * under the terms of the GNU General Public License Version 2, June 1991
@@ -180,7 +180,7 @@ static struct _card_info card_info_SD8887 = {
 #endif
 	.sniffer_support = 0,
 	.per_pkt_cfg_support = 0,
-	.host_mlme_required = 0,
+	.host_mlme_required = 1,
 };
 #endif
 
@@ -221,7 +221,7 @@ static struct _card_info card_info_SD8897 = {
 #endif
 	.sniffer_support = 0,
 	.per_pkt_cfg_support = 0,
-	.host_mlme_required = 0,
+	.host_mlme_required = 1,
 };
 #endif
 
@@ -243,7 +243,7 @@ static struct _card_info card_info_PCIE8897 = {
 	.fw_stuck_code_reg = 0,
 	.sniffer_support = 0,
 	.per_pkt_cfg_support = 0,
-	.host_mlme_required = 0,
+	.host_mlme_required = 1,
 };
 #endif
 
@@ -263,7 +263,7 @@ static struct _card_info card_info_USB8897 = {
 	.fw_name_wlan = USB8897_DEFAULT_WLAN_FW_NAME,
 	.sniffer_support = 0,
 	.per_pkt_cfg_support = 0,
-	.host_mlme_required = 0,
+	.host_mlme_required = 1,
 };
 #endif
 
@@ -828,7 +828,7 @@ static struct _card_info card_info_USB8801 = {
 	.fw_name_wlan = USB8801_DEFAULT_WLAN_FW_NAME,
 	.sniffer_support = 1,
 	.per_pkt_cfg_support = 0,
-	.host_mlme_required = 0,
+	.host_mlme_required = 1,
 };
 #endif
 
@@ -3232,6 +3232,7 @@ static t_u32 woal_process_init_cfg(moal_handle *handle, t_u8 *data, t_size size)
 	t_size line_len;
 	t_u8 index = 0;
 	t_u32 i;
+	int j;
 	t_u8 bss_mac_addr[MAX_MAC_ADDR_LEN];
 	t_u8 bss_mac_name[MAX_PARAM_LEN];
 	t_u8 type[MAX_PARAM_LEN];
@@ -3266,9 +3267,14 @@ static t_u32 woal_process_init_cfg(moal_handle *handle, t_u8 *data, t_size size)
 					       __LINE__);
 					goto done;
 				}
-				strncpy(bss_mac_name, intf_s + 1,
-					intf_e - intf_s - 1);
-				bss_mac_name[intf_e - intf_s - 1] = '\0';
+				j = (int)((intf_e - intf_s) - 1);
+				if (j < 0) {
+					PRINTM(MERROR,
+					       "Incorrect interface name size %d\n",
+					       __LINE__);
+					goto done;
+				}
+				bss_mac_name[j] = '\0';
 				for (i = 0; i < handle->priv_num; i++) {
 					if (strcmp(bss_mac_name,
 						   handle->priv[i]
@@ -3362,9 +3368,16 @@ static t_u32 woal_process_init_cfg(moal_handle *handle, t_u8 *data, t_size size)
 					       __LINE__);
 					goto done;
 				}
+				j = (int)(intf_e - intf_s);
+				if (j < 0) {
+					PRINTM(MERROR,
+					       "Regsier offset is negative %d\n",
+					       __LINE__);
+					goto done;
+				}
 				/* Copy offset */
-				strncpy(offset, intf_s, intf_e - intf_s);
-				offset[intf_e - intf_s] = '\0';
+				strncpy(offset, intf_s, j);
+				offset[j] = '\0';
 			} else {
 				PRINTM(MERROR, "Wrong config file format %d\n",
 				       __LINE__);
@@ -3452,8 +3465,7 @@ static mlan_status woal_process_hostcmd_cfg(moal_handle *handle, t_u8 *data,
 			cmd_len = *((t_u16 *)(buf + strlen(CMD_STR) +
 					      sizeof(t_u32) + sizeof(t_u16)));
 			moal_memcpy_ext(handle, buf + strlen(CMD_STR), &cmd_len,
-					sizeof(t_u32),
-					CMD_BUF_LEN - strlen(CMD_STR));
+					sizeof(t_u32), sizeof(t_u32));
 
 			/* fire the hostcommand from here */
 			woal_priv_hostcmd(handle->priv[0], buf, CMD_BUF_LEN,

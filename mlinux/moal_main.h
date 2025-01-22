@@ -3,7 +3,7 @@
  * @brief This file contains wlan driver specific defines etc.
  *
  *
- * Copyright 2008-2024 NXP
+ * Copyright 2008-2025 NXP
  *
  * This software file (the File) is distributed by NXP
  * under the terms of the GNU General Public License Version 2, June 1991
@@ -2606,6 +2606,9 @@ enum ext_mod_params {
 	EXT_CHAN_TRACK,
 	EXT_DMCS,
 	EXT_PREF_DBC,
+#if CFG80211_VERSION_CODE > KERNEL_VERSION(4, 12, 14)
+	EXT_CFG80211_EAPOL_OFFLOAD,
+#endif
 	EXT_MAX_PARAM,
 };
 
@@ -3413,118 +3416,118 @@ extern t_u32 drvdbg;
 #define LOG_CTRL(level) (0)
 
 #ifdef DEBUG_LEVEL2
-#define PRINTM_MINFO(level, msg...)                                            \
+#define PRINTM_MINFO(msg...)                                                   \
 	do {                                                                   \
-		woal_print(level, msg);                                        \
+		woal_print(MINFO, msg);                                        \
 		if (drvdbg & MINFO)                                            \
 			printk(KERN_DEBUG msg);                                \
 	} while (0)
-#define PRINTM_MWARN(level, msg...)                                            \
+#define PRINTM_MWARN(msg...)                                                   \
 	do {                                                                   \
-		woal_print(level, msg);                                        \
+		woal_print(MWARN, msg);                                        \
 		if (drvdbg & MWARN)                                            \
 			printk(KERN_DEBUG msg);                                \
 	} while (0)
-#define PRINTM_MENTRY(level, msg...)                                           \
+#define PRINTM_MENTRY(msg...)                                                  \
 	do {                                                                   \
-		woal_print(level, msg);                                        \
+		woal_print(MENTRY, msg);                                       \
 		if (drvdbg & MENTRY)                                           \
 			printk(KERN_DEBUG msg);                                \
 	} while (0)
 #else
-#define PRINTM_MINFO(level, msg...)                                            \
+#define PRINTM_MINFO(msg...)                                                   \
 	do {                                                                   \
 	} while (0)
-#define PRINTM_MWARN(level, msg...)                                            \
+#define PRINTM_MWARN(msg...)                                                   \
 	do {                                                                   \
 	} while (0)
-#define PRINTM_MENTRY(level, msg...)                                           \
+#define PRINTM_MENTRY(msg...)                                                  \
 	do {                                                                   \
 	} while (0)
 #endif /* DEBUG_LEVEL2 */
 
-#define PRINTM_MFWDP_D(level, msg...)                                          \
+#define PRINTM_MFWDP_D(msg...)                                                 \
 	do {                                                                   \
-		woal_print(level, msg);                                        \
+		woal_print(MFWDP_D, msg);                                      \
 		if (drvdbg & MFWDP_D)                                          \
 			printk(KERN_DEBUG msg);                                \
 	} while (0)
-#define PRINTM_MFW_D(level, msg...)                                            \
+#define PRINTM_MFW_D(msg...)                                                   \
 	do {                                                                   \
-		woal_print(level, msg);                                        \
+		woal_print(MFW_D, msg);                                        \
 		if (drvdbg & MFW_D)                                            \
 			printk(KERN_DEBUG msg);                                \
 	} while (0)
-#define PRINTM_MCMD_D(level, msg...)                                           \
+#define PRINTM_MCMD_D(msg...)                                                  \
 	do {                                                                   \
-		woal_print(level, msg);                                        \
+		woal_print(MCMD_D, msg);                                       \
 		if (drvdbg & MCMD_D)                                           \
 			printk(KERN_DEBUG msg);                                \
 	} while (0)
-#define PRINTM_MDAT_D(level, msg...)                                           \
+#define PRINTM_MDAT_D(msg...)                                                  \
 	do {                                                                   \
-		woal_print(level, msg);                                        \
+		woal_print(MDAT_D, msg);                                       \
 		if (drvdbg & MDAT_D)                                           \
 			printk(KERN_DEBUG msg);                                \
 	} while (0)
-#define PRINTM_MIF_D(level, msg...)                                            \
+#define PRINTM_MIF_D(msg...)                                                   \
 	do {                                                                   \
-		woal_print(level, msg);                                        \
+		woal_print(MIF_D, msg);                                        \
 		if (drvdbg & MIF_D)                                            \
 			printk(KERN_DEBUG msg);                                \
 	} while (0)
 
-#define PRINTM_MREG(level, msg...)                                             \
+#define PRINTM_MREG(msg...)                                                    \
 	do {                                                                   \
-		woal_print(level, msg);                                        \
+		woal_print(MREG, msg);                                         \
 		if (drvdbg & MREG)                                             \
 			printk(KERN_DEBUG msg);                                \
 	} while (0)
-#define PRINTM_MIOCTL(level, msg...)                                           \
+#define PRINTM_MIOCTL(msg...)                                                  \
 	do {                                                                   \
-		woal_print(level, msg);                                        \
+		woal_print(MIOCTL, msg);                                       \
 		if (drvdbg & MIOCTL)                                           \
 			printk(KERN_DEBUG msg);                                \
 	} while (0)
-#define PRINTM_MINTR(level, msg...)                                            \
+#define PRINTM_MINTR(msg...)                                                   \
 	do {                                                                   \
-		woal_print(level, msg);                                        \
+		woal_print(MINTR, msg);                                        \
 		if (drvdbg & MINTR)                                            \
 			printk(KERN_DEBUG msg);                                \
 	} while (0)
-#define PRINTM_MEVENT(level, msg...)                                           \
+#define PRINTM_MEVENT(msg...)                                                  \
 	do {                                                                   \
-		woal_print(level, msg);                                        \
+		woal_print(MEVENT, msg);                                       \
 		if (drvdbg & MEVENT)                                           \
 			printk(msg);                                           \
 	} while (0)
-#define PRINTM_MCMND(level, msg...)                                            \
+#define PRINTM_MCMND(msg...)                                                   \
 	do {                                                                   \
-		woal_print(level, msg);                                        \
+		woal_print(MCMND, msg);                                        \
 		if (drvdbg & MCMND)                                            \
 			printk(KERN_DEBUG msg);                                \
 	} while (0)
-#define PRINTM_MDATA(level, msg...)                                            \
+#define PRINTM_MDATA(msg...)                                                   \
 	do {                                                                   \
-		woal_print(level, msg);                                        \
+		woal_print(MDATA, msg);                                        \
 		if (drvdbg & MDATA)                                            \
 			printk(KERN_DEBUG msg);                                \
 	} while (0)
-#define PRINTM_MERROR(level, msg...)                                           \
+#define PRINTM_MERROR(msg...)                                                  \
 	do {                                                                   \
-		woal_print(level, msg);                                        \
+		woal_print(MERROR, msg);                                       \
 		if (drvdbg & MERROR)                                           \
 			printk(KERN_ERR msg);                                  \
 	} while (0)
-#define PRINTM_MFATAL(level, msg...)                                           \
+#define PRINTM_MFATAL(msg...)                                                  \
 	do {                                                                   \
-		woal_print(level, msg);                                        \
+		woal_print(MFATAL, msg);                                       \
 		if (drvdbg & MFATAL)                                           \
 			printk(KERN_ERR msg);                                  \
 	} while (0)
-#define PRINTM_MMSG(level, msg...)                                             \
+#define PRINTM_MMSG(msg...)                                                    \
 	do {                                                                   \
-		woal_print(level, msg);                                        \
+		woal_print(MMSG, msg);                                         \
 		if (drvdbg & MMSG)                                             \
 			printk(KERN_ALERT msg);                                \
 	} while (0)
@@ -3533,7 +3536,7 @@ static inline void woal_print(t_u32 level, char *fmt, ...)
 {
 }
 
-#define PRINTM(level, msg...) PRINTM_##level(level, msg)
+#define PRINTM(level, msg...) PRINTM_##level(msg)
 
 #else
 

@@ -3,7 +3,7 @@
  * @brief This file contains the callback functions registered to MLAN
  *
  *
- * Copyright 2008-2024 NXP
+ * Copyright 2008-2025 NXP
  *
  * This software file (the File) is distributed by NXP
  * under the terms of the GNU General Public License Version 2, June 1991
@@ -937,6 +937,7 @@ mlan_status moal_get_hw_spec_complete(t_void *pmoal, mlan_status status,
 			moal_memcpy_ext(handle, driver_version, CARD_PCIEAW690,
 					strlen(CARD_PCIEAW690),
 					strlen(driver_version));
+			// coverity[string_null:SUPPRESS]
 			moal_memcpy_ext(handle,
 					driver_version + strlen(INTF_CARDTYPE) +
 						strlen(KERN_VERSION),
@@ -947,6 +948,8 @@ mlan_status moal_get_hw_spec_complete(t_void *pmoal, mlan_status status,
 			if (drv_ver_len >= MLAN_MAX_VER_STR_LEN - 1) {
 				drv_ver_len = MLAN_MAX_VER_STR_LEN - 1;
 			}
+			// coverity[overrun-buffer-arg:SUPPRESS]
+			// coverity[cert_arr30_c_violation:SUPPRESS]
 			moal_memcpy_ext(handle, handle->driver_version,
 					driver_version, drv_ver_len,
 					MLAN_MAX_VER_STR_LEN - 1);

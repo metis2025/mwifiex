@@ -3,7 +3,7 @@
  * @brief This file contains the functions for CFG80211.
  *
  *
- * Copyright 2011-2024 NXP
+ * Copyright 2011-2025 NXP
  *
  * This software file (the File) is distributed by NXP
  * under the terms of the GNU General Public License Version 2, June 1991
@@ -3456,6 +3456,9 @@ woal_cfg80211_custom_ie(moal_private *priv, custom_ie *beacon_ies_data,
 	if (beacon_ies_data) {
 		len = sizeof(*beacon_ies_data) - MAX_IE_SIZE +
 		      beacon_ies_data->ie_length;
+		if (len > MAX_IE_SIZE) {
+			len = MAX_IE_SIZE;
+		}
 		moal_memcpy_ext(priv->phandle, pos, beacon_ies_data, len,
 				remain_len);
 		pos += len;
@@ -3466,6 +3469,9 @@ woal_cfg80211_custom_ie(moal_private *priv, custom_ie *beacon_ies_data,
 	if (proberesp_ies_data) {
 		len = sizeof(*proberesp_ies_data) - MAX_IE_SIZE +
 		      proberesp_ies_data->ie_length;
+		if (len > MAX_IE_SIZE) {
+			len = MAX_IE_SIZE;
+		}
 		moal_memcpy_ext(priv->phandle, pos, proberesp_ies_data, len,
 				remain_len);
 		pos += len;
@@ -3476,6 +3482,9 @@ woal_cfg80211_custom_ie(moal_private *priv, custom_ie *beacon_ies_data,
 	if (assocresp_ies_data) {
 		len = sizeof(*assocresp_ies_data) - MAX_IE_SIZE +
 		      assocresp_ies_data->ie_length;
+		if (len > MAX_IE_SIZE) {
+			len = MAX_IE_SIZE;
+		}
 		moal_memcpy_ext(priv->phandle, pos, assocresp_ies_data, len,
 				remain_len);
 		pos += len;
@@ -3486,6 +3495,9 @@ woal_cfg80211_custom_ie(moal_private *priv, custom_ie *beacon_ies_data,
 	if (probereq_ies_data) {
 		len = sizeof(*probereq_ies_data) - MAX_IE_SIZE +
 		      probereq_ies_data->ie_length;
+		if (len > MAX_IE_SIZE) {
+			len = MAX_IE_SIZE;
+		}
 		moal_memcpy_ext(priv->phandle, pos, probereq_ies_data, len,
 				remain_len);
 		pos += len;

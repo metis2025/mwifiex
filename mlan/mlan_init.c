@@ -4,7 +4,7 @@
  *  and HW.
  *
  *
- *  Copyright 2008-2021, 2024 NXP
+ *  Copyright 2008-2021, 2024-2025 NXP
  *
  *  This software file (the File) is distributed by NXP
  *  under the terms of the GNU General Public License Version 2, June 1991
@@ -802,7 +802,7 @@ t_void wlan_init_adapter(pmlan_adapter pmadapter)
 	pmadapter->pm_wakeup_fw_try = MFALSE;
 	pmadapter->pm_wakeup_timeout = 0;
 
-	if (!pmadapter->init_para.max_tx_buf)
+	if (!pmadapter->init_para.max_tx_buf && pmadapter->pcard_info)
 		pmadapter->max_tx_buf_size =
 			pmadapter->pcard_info->max_tx_buf_size;
 	else
@@ -2044,6 +2044,7 @@ static mlan_status wlan_init_interface(pmlan_adapter pmadapter)
 			for (j = 0; mlan_ops[j]; j++) {
 				if (mlan_ops[j]->bss_role ==
 				    GET_BSS_ROLE(pmadapter->priv[i])) {
+					// coverity[cert_exp34_c_violation:SUPPRESS]
 					memcpy_ext(pmadapter,
 						   &pmadapter->priv[i]->ops,
 						   mlan_ops[j],

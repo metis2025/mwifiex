@@ -4,7 +4,7 @@
  *  related functions.
  *
  *
- * Copyright 2008-2022, 2024 NXP
+ * Copyright 2008-2022, 2024-2025 NXP
  *
  * This software file (the File) is distributed by NXP
  * under the terms of the GNU General Public License Version 2, June 1991
@@ -3358,7 +3358,8 @@ static int woal_sdiommc_reset_fw(moal_handle *handle)
 		ret = -EFAULT;
 		goto done;
 	}
-	udelay(4000);
+	udelay(2000);
+	udelay(2000);
 	/** wait SOC fully wake up */
 	for (tries = 0; tries < MAX_POLL_TRIES; ++tries) {
 		ret = handle->ops.write_reg(handle, reset_reg, 0xba);

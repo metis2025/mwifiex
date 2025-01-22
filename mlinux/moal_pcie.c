@@ -4,7 +4,7 @@
  *  related functions.
  *
  *
- * Copyright 2008-2022, 2024 NXP
+ * Copyright 2008-2022, 2024-2025 NXP
  *
  * This software file (the File) is distributed by NXP
  * under the terms of the GNU General Public License Version 2, June 1991
@@ -228,6 +228,7 @@ static t_u16 woal_update_card_type(t_void *card)
 		card_type = CARD_TYPE_PCIE9098;
 		moal_memcpy_ext(NULL, driver_version, CARD_PCIE9098,
 				strlen(CARD_PCIE9098), strlen(driver_version));
+		// coverity[string_null:SUPPRESS]
 		moal_memcpy_ext(NULL,
 				driver_version + strlen(INTF_CARDTYPE) +
 					strlen(KERN_VERSION),
@@ -886,6 +887,11 @@ static int woal_pcie_resume(struct pci_dev *pdev)
 		handle->surprise_removed = MFALSE;
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(3, 18, 0)
 		woal_do_flr(handle, false, false);
+#endif
+#if defined(STA_CFG80211) || defined(UAP_CFG80211)
+#if CFG80211_VERSION_CODE >= KERNEL_VERSION(3, 2, 0)
+		handle->cfg80211_suspend = MFALSE;
+#endif
 #endif
 	} else {
 		if (woal_check_driver_status(handle)) {

@@ -4,7 +4,7 @@
  *  @brief This file include miscellaneous functions for MLAN module
  *
  *
- *  Copyright 2009-2024 NXP
+ *  Copyright 2009-2025 NXP
  *
  *  This software file (the File) is distributed by NXP
  *  under the terms of the GNU General Public License Version 2, June 1991
@@ -1255,7 +1255,7 @@ t_void wlan_free_mlan_buffer(mlan_adapter *pmadapter, pmlan_buffer pmbuf)
 	pmlan_callbacks pcb = &pmadapter->callbacks;
 	ENTER();
 
-	if (pcb && pmbuf) {
+	if (pcb && pmbuf && pmadapter->pmoal_handle) {
 		if (pmbuf->flags & MLAN_BUF_FLAG_BRIDGE_BUF)
 			util_scalar_decrement(
 				pmadapter->pmoal_handle,
@@ -6649,6 +6649,7 @@ mlan_status wlan_sec_ioctl_passphrase(pmlan_adapter pmadapter,
 	sec = (mlan_ds_sec_cfg *)pioctl_req->pbuf;
 
 	if (!IS_FW_SUPPORT_SUPPLICANT(pmpriv->adapter)) {
+		PRINTM(MERROR, "FW doesn't support embedded supplicant\n");
 		LEAVE();
 		return ret;
 	}

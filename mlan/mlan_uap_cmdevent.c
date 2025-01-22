@@ -3,7 +3,7 @@
  *  @brief This file contains the handling of AP mode command and event
  *
  *
- *  Copyright 2009-2024 NXP
+ *  Copyright 2009-2025 NXP
  *
  *  This software file (the File) is distributed by NXP
  *  under the terms of the GNU General Public License Version 2, June 1991
@@ -5786,7 +5786,8 @@ mlan_status wlan_ops_uap_process_event(t_void *priv)
 
 	/* Allocate memory for event buffer */
 	ret = pcb->moal_malloc(pmadapter->pmoal_handle,
-			       MAX_EVENT_SIZE + sizeof(mlan_event),
+			       MAX_EVENT_SIZE + sizeof(mlan_event) +
+				       sizeof(eventcause),
 			       MLAN_MEM_DEF, &event_buf);
 	if ((ret != MLAN_STATUS_SUCCESS) || !event_buf) {
 		PRINTM(MERROR, "Could not allocate buffer for event buf\n");
