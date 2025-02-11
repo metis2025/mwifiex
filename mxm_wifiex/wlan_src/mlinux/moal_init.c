@@ -2454,6 +2454,7 @@ void woal_init_from_dev_tree(void)
 #endif
 #endif
 	}
+	of_node_put(dt_node);
 	LEAVE();
 	return;
 }
